@@ -6,3 +6,6 @@ bun = "1.4.0"
 # Matches "engines" in functions/package.json — the Functions emulator runs
 # the code on the local Node, so CI and dev should run what production runs.
 node = "22"
+# For infra/. Exact version, so CI's fmt/validate and your local plan/apply
+# agree (infra/versions.tf allows ~> 1.16).
+terraform = "1.16.3"

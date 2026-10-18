@@ -176,6 +176,24 @@ skipped because GitHub gives them no OIDC token.
 login weekly (and on demand), read-only. That catches GCP-side breakage
 such as a repo rename that happens without any PR.
 
+## Infrastructure
+
+The cloud and repository setup is Terraform in [`infra/`](infra/):
+- the GCP project and its APIs
+- Firebase Hosting and the `ip.mlz.no` domain
+- the Workload Identity Federation login and the deploy service account's
+  roles
+- the budget
+- the repository settings, Actions variables, environments, and the ruleset
+  that protects `main`
+
+What ships on every merge (the function, `public/`, `firebase.json`) stays
+with `firebase deploy`. Terraform describes the setup, not the releases.
+CI runs `terraform fmt` and `validate`. `plan` and `apply` are run by hand,
+so the deploy account never needs rights to change IAM.
+[`infra/README.md`](infra/README.md) has the details and the first-time
+setup.
+
 ## Contributing
 
 This is a personal project, not one soliciting new features — but bug

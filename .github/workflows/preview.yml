@@ -9,7 +9,8 @@ name: Preview
 # /ip on the preview URL calls the live production function.
 #
 # Same keyless WIF auth and repo variables as deploy.yml, but without the
-# protected `production` environment.
+# protected `production` environment. `deploy-preview` is a required check
+# on main (infra/github.tf).
 on:
   pull_request:
 

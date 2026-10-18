@@ -11,6 +11,15 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Terraform: providers, local state and plans never belong in git. The
+# provider lock file (.terraform.lock.hcl) does.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*_override.tf
+crash.log
+
 # Environment variables
 .env
 .env.local

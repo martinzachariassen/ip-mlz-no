@@ -45,3 +45,30 @@ jobs:
       # run locally — see scripts/verify.sh.
       - name: Check firebase.json headers, cache policy, and /ip
         run: ./scripts/verify.sh
+
+  # Static checks of infra/. No credentials: `init -backend=false` skips the
+  # state bucket, so this can't read or change anything in GCP or GitHub.
+  # plan/apply run locally (see infra/README.md).
+  terraform:
+    name: terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up mise (installs Terraform from mise.toml)
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+
+      - name: Format check
+        run: terraform fmt -check -recursive -diff
+
+      - name: Init (providers only, from the lock file)
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate
+        run: terraform validate

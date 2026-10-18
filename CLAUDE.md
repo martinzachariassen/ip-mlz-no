@@ -27,6 +27,10 @@ merge. A merge to `main` deploys to prod.
 - `functions/index.js`: the `/ip` handler. CommonJS, npm-managed (its own
   `package-lock.json`). The root uses Bun (`bun.lock`). Don't mix them.
 - `firebase.json`: rewrites, security headers, cache policy (JSONC).
+- `infra/`: Terraform for the GCP and GitHub setup (project, APIs, WIF,
+  deploy service account and roles, Hosting site and domain, budget, repo
+  settings and ruleset). Run plan and apply by hand with tokens from the
+  environment (`infra/README.md`). CI only runs `fmt` and `validate`.
 
 ## Invariants: don't break these
 
@@ -44,7 +48,14 @@ merge. A merge to `main` deploys to prod.
 - Every URL in `404.html` must be root-relative, because it is served at
   arbitrary paths.
 - The firebase project ID (`what-is-my-ip-f7210`) is intentional and can't
-  be renamed. It lives in `.firebaserc`, `deploy.yml` and `verify.sh`.
+  be renamed. It lives in `.firebaserc`, the workflows, `verify.sh` and
+  `infra/` (`variables.tf`, the backend in `versions.tf`, `imports.tf`).
+- GCP IAM/WIF, APIs, and GitHub repo settings or rules are changed in
+  `infra/`, never in a console. Console edits show up as drift in the next
+  plan. Function code and Hosting config stay with `firebase deploy`.
+  Don't move them into Terraform.
+- WIF matches on the repository's numeric ID (`infra/wif.tf`), not its name,
+  so a rename can't break deploys again.
 
 ## Frontend preview
 

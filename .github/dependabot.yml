@@ -31,3 +31,15 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "chore"
+
+  # Provider versions in infra/ (versions.tf + .terraform.lock.hcl). CI only
+  # validates them: run `terraform plan` locally before merging these.
+  - package-ecosystem: "terraform"
+    directory: "/infra"
+    schedule:
+      interval: "weekly"
+    groups:
+      terraform:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"

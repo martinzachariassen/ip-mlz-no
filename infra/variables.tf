@@ -1,0 +1,49 @@
+# Inputs. Every one has a default, so `terraform plan` needs no -var flags or
+# .tfvars file — these are here to name things once, not to make the
+# configuration reusable for other projects.
+
+variable "project_id" {
+  description = "GCP/Firebase project. Fixed: project IDs can't be renamed."
+  type        = string
+  default     = "what-is-my-ip-f7210"
+}
+
+variable "project_name" {
+  description = "Display name of the GCP project."
+  type        = string
+  default     = "what-is-my-ip"
+}
+
+variable "region" {
+  description = "Region for regional resources. Matches functions/index.js."
+  type        = string
+  default     = "europe-west1"
+}
+
+variable "billing_account" {
+  description = "Billing account the project is charged to."
+  type        = string
+}
+
+variable "budget_nok" {
+  description = "Monthly budget in NOK. Alerts only: GCP never stops spending at it."
+  type        = number
+}
+
+variable "github_owner" {
+  description = "GitHub user that owns the repository."
+  type        = string
+  default     = "martinzachariassen"
+}
+
+variable "github_repo" {
+  description = "Repository name (without owner)."
+  type        = string
+  default     = "ip-mlz-no"
+}
+
+variable "domain" {
+  description = "Custom domain served by Firebase Hosting."
+  type        = string
+  default     = "ip.mlz.no"
+}

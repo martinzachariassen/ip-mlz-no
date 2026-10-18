@@ -4,7 +4,7 @@ name: GCP auth check
 # needs. The login can break with no code change at all: renaming the repo
 # broke the WIF condition and failed every deploy on main. Without a PR,
 # nothing else would notice until the next merge. Run it by hand from the
-# Actions tab after touching WIF or IAM.
+# Actions tab after applying changes to infra/wif.tf.
 #
 # Read-only: it lists resources and deploys nothing.
 on:

@@ -12,6 +12,8 @@ name: Deploy
 # account, locked to this repo via an attribute condition. Nothing secret
 # lives here, so these are repo *variables*, not secrets:
 #   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+# The pool, the service account, its roles, and both variables are defined
+# in infra/wif.tf and infra/github.tf.
 on:
   push:
     branches: [main]
