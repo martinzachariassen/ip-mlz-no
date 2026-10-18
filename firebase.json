@@ -53,6 +53,10 @@
             "value": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self'; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; upgrade-insecure-requests"
           },
           {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin"
+          },
+          {
             "key": "Cache-Control",
             "value": "public, max-age=0, must-revalidate"
           }
@@ -96,10 +100,11 @@
     }
   ],
   // Pinned ports rather than the CLI defaults, so CI has a fixed address to
-  // curl against.
+  // curl against. Hosting is on 5050, not the CLI's 5000: macOS's AirPlay
+  // Receiver listens on 5000, so the default fails to bind on a Mac.
   "emulators": {
     "hosting": {
-      "port": 5000
+      "port": 5050
     },
     "functions": {
       "port": 5001

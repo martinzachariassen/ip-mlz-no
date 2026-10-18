@@ -12,7 +12,7 @@
 # Requires `bun install` and `(cd functions && npm ci)` to have run first.
 set -euo pipefail
 
-PORT="${PORT:-5000}"
+PORT="${PORT:-5050}"
 PROJECT="${PROJECT:-what-is-my-ip-f7210}"
 
 # Paths below are repo-relative, and the emulators need firebase.json in cwd.
@@ -26,11 +26,19 @@ bunx firebase-tools emulators:start --only hosting,functions \
 server=$!
 trap 'kill "$server" 2>/dev/null || true' EXIT
 
-# Wait up to 60s for the emulator to bind.
+# Wait up to 60s for the emulator to bind. Bail out loudly if it never does,
+# rather than letting every check below fail with no hint as to why.
+up=0
 for _ in $(seq 1 120); do
-  curl -sf -o /dev/null "$base/" && break
+  if curl -sf -o /dev/null "$base/"; then up=1; break; fi
   sleep 0.5
 done
+if [ "$up" != "1" ]; then
+  echo "FAIL emulator never came up on $base (port taken?)"
+  echo "--- emulator log ---"
+  cat "$log"
+  exit 1
+fi
 
 # Hosting answers before the (npm-installed, cold-started) Functions
 # emulator has finished parsing and registering the function, so /ip can
@@ -56,7 +64,7 @@ bad() { echo "FAIL $1"; fail=1; }
 headers() { curl -s -D - -o /dev/null "$1"; }
 
 # Catches a deleted/mistyped header, otherwise invisible until someone scans the site.
-for header in content-security-policy strict-transport-security x-content-type-options x-frame-options referrer-policy permissions-policy; do
+for header in content-security-policy strict-transport-security x-content-type-options x-frame-options referrer-policy permissions-policy cross-origin-opener-policy; do
   if headers "$base/" | grep -qi "^$header:"; then
     ok "header $header present"
   else
@@ -124,6 +132,32 @@ if headers "$base/ip" | grep -qi '^vary:.*accept'; then
   ok "/ip varies on Accept"
 else
   bad "/ip is missing Vary: Accept"
+fi
+
+if headers "$base/ip" | grep -qi '^x-robots-tag:.*noindex'; then
+  ok "/ip is noindex"
+else
+  bad "/ip is missing X-Robots-Tag: noindex"
+fi
+
+# X-Forwarded-For is caller-controlled on the raw Cloud Run URL; anything
+# that isn't an address must be refused, not echoed or used as a
+# rate-limit key.
+status="$(curl -s -o /dev/null -w '%{http_code}' \
+  -H 'X-Forwarded-For: not-an-address' "$base/ip")"
+if [ "$status" = "502" ]; then
+  ok "/ip refuses a forwarded value that isn't an address"
+else
+  bad "/ip accepted a forwarded value that isn't an address (status $status)"
+fi
+
+# IPv4-mapped IPv6 is reported as the IPv4 it carries.
+mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' \
+  -H 'Accept: application/json' "$base/ip")"
+if echo "$mapped" | grep -q '"ip":"198.51.100.7","family":"v4"'; then
+  ok "/ip unwraps IPv4-mapped IPv6"
+else
+  bad "/ip did not unwrap IPv4-mapped IPv6 (got: $mapped)"
 fi
 
 # Nothing mutates, so anything but a read is a probe.
