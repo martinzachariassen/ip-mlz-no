@@ -1,5 +1,5 @@
 {
-  "name": "what-is-my-ip",
+  "name": "ip-mlz-no",
   "version": "1.0.0",
   "private": true,
   "description": "\"What is my IP\" — a static site with a small Cloud Function backend, served from Firebase Hosting.",
@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martinzachariassen/what-is-my-ip.git"
+    "url": "git+https://github.com/martinzachariassen/ip-mlz-no.git"
   },
   "type": "module",
   "scripts": {
