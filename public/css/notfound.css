@@ -1,9 +1,9 @@
 /* ---- 404 page ---- */
+/* No min-height: body already fills the viewport and centres its child.
+   Repeating 100svh here, on top of body's padding, overflowed the page and
+   put a scrollbar on a two-line 404. */
 .notfound {
   display: flex;
-  min-height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: deliberate fallback, see body rule in base.css */
-  min-height: 100svh;
   flex-direction: column;
   align-items: center;
   justify-content: center;

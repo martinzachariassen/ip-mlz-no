@@ -33,12 +33,11 @@
   transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
 }
 
-/* Out of flow and pinned across the row so the hint's width can never nudge
-   the status text off centre. `[data-copyable]` guarantees the row is
-   otherwise empty, so the two never collide.
-   The delay only applies coming in — a pointer passing through leaves
-   before ever being offered anything, but the exit has to be instant or it
-   reads as answering the click that dismissed it. */
+/* "tap to copy", for touch devices only. Out of flow and pinned across the
+   row so it overlays the (hidden) meta text instead of nudging it off
+   centre. Hidden by default; the coarse-pointer rule below stands it up
+   while the address is copyable, and it slides back in after a copy
+   confirmation clears. */
 .copy-hint {
   position: absolute;
   left: 0;
@@ -46,21 +45,15 @@
   top: 0;
   white-space: nowrap;
   pointer-events: none;
-  opacity: var(--affordance, 0);
-  translate: 0 calc((1 - var(--affordance, 0)) * 3px);
+  opacity: 0;
+  translate: 0 3px;
   transition:
     opacity 200ms var(--ease),
     translate 320ms var(--ease-expo);
-  transition-delay: calc(var(--affordance, 0) * 220ms);
 }
 
-.meta[data-copied] .copy-hint {
-  opacity: 0;
-  transition-delay: 0s;
-}
-
-/* Only relevant on a device with no hover/keyboard — the meta line carries
-   the shortcuts there instead. */
+/* On a device with hover and a keyboard the meta line carries the C/R
+   shortcuts instead, so the touch hint never renders there. */
 .copy-hint-coarse {
   display: none;
 }
@@ -70,13 +63,11 @@
     display: block;
   }
 
-  /* No hover to reveal this, so it stands at rest instead. */
   .hero:has(.ip-display[data-copyable])
     .meta:not([data-copied])
     .copy-hint-coarse {
     opacity: 0.75;
     translate: none;
-    transition-delay: 0s;
   }
 
   .hero:has(.ip-display[data-copyable]) .meta:not([data-copied]) .meta-text {

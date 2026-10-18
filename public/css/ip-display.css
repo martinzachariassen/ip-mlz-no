@@ -83,9 +83,46 @@
   transform: scale(0.985);
 }
 
+.ip-text {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  position: relative; /* containing block for the hover rail */
+}
+
+/* One hextet/octet plus its separator, kept together so a wrap can't land
+   mid-group. */
+.group {
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+/* 1ch == advance width of "0", pinning digits to a fixed column whether or
+   not Rajdhani ships the `tnum` feature. */
+.cell {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+  transition: color 140ms var(--ease);
+  transition-delay: calc(var(--i) * 8ms);
+}
+.cell.sep {
+  width: auto;
+  transition-delay: 0s;
+}
+
+.cell.is-scrambling {
+  color: var(--fg-muted);
+  opacity: 0.55;
+  transition:
+    color 120ms var(--ease),
+    opacity 120ms var(--ease);
+  transition-delay: 0s;
+}
+
 /* ---- affordance: hover and keyboard focus ---- */
 /* One switch, --affordance, set on .hero (a shared ancestor, since custom
-   properties only travel down) so hover, the rail, and the copy hint stay
+   properties only travel down) so the separator tint and the rail stay
    in sync while each keeps its own transition.
    `[data-copyable]` is the whole gate — the failed-lookup placeholder isn't
    a button and must not light up or offer to copy. */
@@ -130,43 +167,6 @@
   transition:
     opacity 200ms var(--ease),
     scale 420ms var(--ease-expo);
-}
-
-.ip-text {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  justify-content: center;
-  position: relative; /* containing block for the hover rail */
-}
-
-/* One hextet/octet plus its separator, kept together so a wrap can't land
-   mid-group. */
-.group {
-  display: inline-flex;
-  white-space: nowrap;
-}
-
-/* 1ch == advance width of "0", pinning digits to a fixed column whether or
-   not Rajdhani ships the `tnum` feature. */
-.cell {
-  display: inline-block;
-  width: 1ch;
-  text-align: center;
-  transition: color 140ms var(--ease);
-  transition-delay: calc(var(--i) * 8ms);
-}
-.cell.sep {
-  width: auto;
-  transition-delay: 0s;
-}
-
-.cell.is-scrambling {
-  color: var(--fg-muted);
-  opacity: 0.55;
-  transition:
-    color 120ms var(--ease),
-    opacity 120ms var(--ease);
-  transition-delay: 0s;
 }
 
 /* ---- copy confirmation ---- */

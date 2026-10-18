@@ -14,7 +14,6 @@
   .copy-hint {
     translate: none;
     transition: opacity 120ms var(--ease);
-    transition-delay: calc(var(--affordance, 0) * 220ms);
   }
   .cell {
     transition-duration: 60ms;
