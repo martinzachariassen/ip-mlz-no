@@ -23,7 +23,9 @@ real address.
 
 - No frontend build step — the files in `public/` are exactly what gets
   deployed
-- A scrambled-digit reveal animation and click/tap-to-copy
+- A scrambled-digit reveal animation and click/tap-to-copy, plus keyboard
+  shortcuts: **C** copies the address, **R** copies it as a CIDR (`/32` or
+  `/128`)
 - One dynamic endpoint, `/ip`, rewritten to a Cloud Function — everything
   else is static and CDN-cached
 - Security headers (CSP, HSTS, and friends) and cache policy defined in
@@ -34,14 +36,15 @@ real address.
 Open the page, or call the endpoint directly:
 
 ```sh
-curl ip.mlz.no/ip
+curl https://ip.mlz.no/ip
 # 203.0.113.9
 
-curl -H 'Accept: application/json' ip.mlz.no/ip
+curl -H 'Accept: application/json' https://ip.mlz.no/ip
 # {"ip":"203.0.113.9","family":"v4"}
 ```
 
-Plain text is the default, so a bare `curl` gets a single line and errors
+Use `https://` (or `curl -L`): plain `http://` gets Hosting's 301 redirect
+rather than the address. Plain text is the default, so a bare `curl` gets a single line and errors
 come back readable rather than as JSON. `family` is `v4` or `v6`. Anything
 but `GET` or `HEAD` answers `405`, and the endpoint is rate limited to 20
 requests per minute per address — past that it answers `429` with
@@ -50,20 +53,30 @@ private`, `Vary: Accept`).
 
 ## Requirements
 
-- [Bun](https://bun.sh), version pinned in [`mise.toml`](mise.toml) — install
-  via [mise](https://mise.jdx.dev), or install Bun yourself and match the
-  version. The Firebase CLI is pulled in as a devDependency, so no separate
-  install is needed.
-- Node.js for `functions/` — it's a separate npm-managed package, since Cloud
-  Functions' build only recognizes npm/yarn lockfiles.
+- [Bun](https://bun.sh) and Node.js 22, both pinned in
+  [`mise.toml`](mise.toml) — `mise install` sets up both, or install them
+  yourself and match the versions. Node 22 is what the function runs on in
+  production (`engines` in `functions/package.json`), and the Functions
+  emulator uses your local Node. The Firebase CLI is pulled in as a
+  devDependency, so no separate install is needed.
+- `functions/` is a separate npm-managed package, since Cloud Functions'
+  build only recognizes npm/yarn lockfiles.
 
 ## Getting started
 
 ```sh
 bun install
-cd functions && npm install && cd ..
-bun run dev     # serves public/ and /ip via the Firebase emulators
+(cd functions && npm ci)
+bun run dev     # serves public/ and /ip on http://127.0.0.1:5050
 ```
+
+The Hosting emulator runs on port 5050 rather than the CLI's default 5000,
+which macOS's AirPlay Receiver already holds.
+
+Append `?v4`, `?v6`, or `?fail` to the page URL to preview the IPv4 layout,
+the IPv6 layout, or the error state without real dual-stack routing. They
+only change what that tab renders (`/ip` isn't called), so they work in
+production as well.
 
 ```sh
 bun run lint    # biome ci .
@@ -88,7 +101,10 @@ A pre-commit hook (wired up by `bun install` via the `prepare` script) runs
 
 The one exception is `/ip`, rewritten by Hosting to a Cloud Function
 ([`functions/index.js`](functions/index.js)) that reads the caller's address
-off `X-Forwarded-For`. Its response is always `no-store`: the answer is
+off `X-Forwarded-For`. Anything that doesn't parse as an IP address
+(`net.isIP`) is refused with a `502` rather than echoed back, and an
+IPv4-mapped IPv6 address (`::ffff:203.0.113.9`) is reported as the IPv4 it
+carries. Its response is always `no-store`: the answer is
 per-visitor by definition, so there is nothing a cache could usefully hold.
 
 That also means every hit reaches the function rather than Hosting's CDN,
@@ -107,7 +123,9 @@ in `functions/index.js`:
   maximum, and a short timeout is what stops a slow-reader flood from
   parking instances.
 - **A per-instance rate limit**, 20 requests per minute per address, in
-  memory: no Redis, no Firestore, no extra bill. With `maxInstances` at 1
+  memory: no Redis, no Firestore, no extra bill. Keys are validated
+  addresses (at most 45 bytes) and capped at 20 000 per window, so the map
+  can't grow past a few MB. With `maxInstances` at 1
   there is one instance holding one map, so 20 is a flat limit rather than
   20 × live instances — an equivalence that is load-bearing, since raising
   `maxInstances` loosens the limit by exactly that factor. On the raw Cloud
@@ -136,7 +154,8 @@ header, so the address the page shows is the real one.
 emulators and asserts that headers, cache rules, and `/ip` actually behave as
 configured — `firebase.json`'s `headers` list is last-match-wins, so a
 reorder could silently break a rule. It also floods `/ip` under a spoofed
-address to prove the rate limit answers 429 at its real production value.
+address to prove the rate limit answers 429 at its real production value,
+and checks that a forwarded value that isn't an address is refused.
 
 That script is the whole quality gate, and all three places that care run
 the identical file: locally, in CI (`.github/workflows/ci.yml`, on every PR
