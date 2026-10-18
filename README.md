@@ -1,6 +1,6 @@
 # ip.mlz.no
 
-[![CI](https://github.com/martinzachariassen/what-is-my-ip/actions/workflows/ci.yml/badge.svg)](https://github.com/martinzachariassen/what-is-my-ip/actions/workflows/ci.yml)
+[![CI](https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml/badge.svg)](https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml)
 
 A minimal "what is my IP" site — live at [ip.mlz.no](https://ip.mlz.no).
 
