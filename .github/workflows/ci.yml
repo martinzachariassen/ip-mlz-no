@@ -24,10 +24,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # Bun version comes from mise.toml — single source of truth. Bun is
+      # Bun and Node versions come from mise.toml — single source of truth
+      # (Node matches functions/package.json's engines). Bun is
       # the package manager for the site tooling; functions/ is plain npm
       # (Cloud Functions' buildpack only recognizes npm/yarn lockfiles).
-      - name: Set up mise (installs Bun from mise.toml)
+      - name: Set up mise (installs Bun + Node from mise.toml)
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
