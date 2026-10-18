@@ -1,3 +1,4 @@
+const { isIP } = require("node:net");
 const { onRequest } = require("firebase-functions/v2/https");
 
 // ALLOW_INTERNAL_AND_GCLB would block this function's own cloudfunctions.net
@@ -43,15 +44,16 @@ exports.ip = onRequest(
     }
 
     const forwarded = req.headers["x-forwarded-for"];
-    const address =
+    const address = normalize(
       (Array.isArray(forwarded) ? forwarded[0] : (forwarded ?? ""))
         .split(",")[0]
         .trim() ||
-      req.socket?.remoteAddress ||
-      // The emulator's local dispatch has no real socket, so there's no
-      // X-Forwarded-For and no remoteAddress to fall back to either — only
-      // real traffic through Google's front end sets those.
-      (process.env.FUNCTIONS_EMULATOR === "true" ? "127.0.0.1" : "");
+        req.socket?.remoteAddress ||
+        // The emulator's local dispatch has no real socket, so there's no
+        // X-Forwarded-For and no remoteAddress to fall back to either — only
+        // real traffic through Google's front end sets those.
+        (process.env.FUNCTIONS_EMULATOR === "true" ? "127.0.0.1" : ""),
+    );
 
     // Never cached — by a browser, by Hosting's CDN, or by anything in
     // between. `Vary` because the same URL answers in two formats.
@@ -73,10 +75,31 @@ exports.ip = onRequest(
       return;
     }
 
-    const family = address.includes(":") ? "v6" : "v4";
+    const family = isIP(address) === 6 ? "v6" : "v4";
     respond(req, res, 200, { ip: address, family });
   },
 );
+
+// The longest textual address there is: an IPv4-mapped IPv6 written out in
+// full ("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255").
+const MAX_ADDRESS_LENGTH = 45;
+
+// Returns a syntactically valid IP address, or "" if `raw` isn't one.
+//
+// On the raw Cloud Run URL X-Forwarded-For is whatever the caller sends, so
+// without this an arbitrary string would be echoed back as "your address"
+// and — worse — used as a rate-limit key: MAX_TRACKED keys of several KB
+// each is more than the instance's 256MiB, which is exactly the OOM the
+// limiter's cap exists to prevent. Validating here bounds every key to 45
+// bytes and guarantees the plain-text answer is a bare address.
+//
+// IPv4-mapped IPv6 (::ffff:203.0.113.9) is unwrapped to the IPv4 it carries,
+// so it's reported — and rendered — as the v4 address it really is.
+function normalize(raw) {
+  if (raw.length > MAX_ADDRESS_LENGTH || isIP(raw) === 0) return "";
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(raw);
+  return mapped && isIP(mapped[1]) === 4 ? mapped[1] : raw;
+}
 
 // curl's default Accept is `*/*`, so it gets plain text; the front end asks
 // for JSON explicitly. Errors follow the same rule, so a curl user gets a
