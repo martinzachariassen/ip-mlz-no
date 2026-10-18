@@ -4,6 +4,10 @@ const SEPARATOR = /[.:]/;
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 
+// The in-flight animation frame per element, so a new scramble on the same
+// element cancels the previous one rather than racing it.
+const frames = new WeakMap();
+
 export function groupCells(cells) {
   const groups = [];
   let group = null;
@@ -42,7 +46,7 @@ export function scramble(el, target, opts = {}) {
     pool = /[a-f]/i.test(target) ? HEX : DIGITS,
   } = opts;
 
-  cancelAnimationFrame(el._scrambleRAF);
+  cancelAnimationFrame(frames.get(el));
 
   const chars = [...target];
   const n = chars.length;
@@ -111,7 +115,7 @@ export function scramble(el, target, opts = {}) {
       }
 
       if (perpetual || t < total) {
-        el._scrambleRAF = requestAnimationFrame(step);
+        frames.set(el, requestAnimationFrame(step));
       } else {
         cells.forEach((c, i) => {
           c.textContent = chars[i];
@@ -120,6 +124,6 @@ export function scramble(el, target, opts = {}) {
         resolve();
       }
     };
-    el._scrambleRAF = requestAnimationFrame(step);
+    frames.set(el, requestAnimationFrame(step));
   });
 }
