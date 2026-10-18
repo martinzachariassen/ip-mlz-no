@@ -166,6 +166,16 @@ the contract has been re-checked against that exact commit. Deploys
 authenticate to Google Cloud via Workload Identity Federation, so no
 long-lived secrets are stored in the repo.
 
+The emulators can't tell whether the real deploy will be allowed, so two
+more workflows cover that:
+[`preview.yml`](.github/workflows/preview.yml) logs in the same way on
+every PR and deploys `public/` to a Hosting preview channel that expires
+after 7 days, with the URL linked from the PR. Fork and Dependabot PRs are
+skipped because GitHub gives them no OIDC token.
+[`gcp-auth-check.yml`](.github/workflows/gcp-auth-check.yml) repeats the
+login weekly (and on demand), read-only. That catches GCP-side breakage
+such as a repo rename that happens without any PR.
+
 ## Contributing
 
 This is a personal project, not one soliciting new features — but bug

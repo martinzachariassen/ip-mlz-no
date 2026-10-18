@@ -1,0 +1,51 @@
+name: GCP auth check
+
+# Weekly check that GitHub can still log in to GCP and read what deploy.yml
+# needs. The login can break with no code change at all: renaming the repo
+# broke the WIF condition and failed every deploy on main. Without a PR,
+# nothing else would notice until the next merge. Run it by hand from the
+# Actions tab after touching WIF or IAM.
+#
+# Read-only: it lists resources and deploys nothing.
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch:
+
+env:
+  PROJECT: what-is-my-ip-f7210
+
+permissions:
+  contents: read
+  # Required for GitHub to mint the OIDC token that WIF exchanges.
+  id-token: write
+
+jobs:
+  auth:
+    name: gcp-auth
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up mise (installs Bun + Node from mise.toml)
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      # One read call per product the deploy touches, so a lost role fails here.
+      - name: Check Hosting access
+        run: bunx firebase-tools hosting:channel:list --project "$PROJECT" --non-interactive
+
+      - name: Check Functions access
+        run: bunx firebase-tools functions:list --project "$PROJECT" --non-interactive

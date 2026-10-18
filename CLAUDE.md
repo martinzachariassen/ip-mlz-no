@@ -16,6 +16,10 @@ bun run format     # biome check --write .
 `verify.sh` is the quality gate: CI and the deploy job run the same file.
 Run it after any change to `firebase.json`, `functions/`, or `public/404.html`.
 
+PRs also get `deploy-preview` (`preview.yml`): a real GCP login and a
+Hosting preview channel, which catches auth and permission breakage before
+merge. A merge to `main` deploys to prod.
+
 ## Layout
 
 - `public/`: served as-is, with no build step. Plain ES modules in `js/` and
