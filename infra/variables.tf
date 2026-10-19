@@ -22,7 +22,7 @@ variable "billing_account" {
 }
 
 variable "budget_nok" {
-  description = "Monthly budget in NOK. Alerts only: GCP never stops spending at it."
+  description = "Monthly budget in NOK. Set with TF_VAR_budget_nok. Alerts only: GCP never stops spending at it."
   type        = number
 }
 

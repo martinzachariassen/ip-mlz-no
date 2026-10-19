@@ -57,6 +57,7 @@ export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
 export GITHUB_TOKEN="$(gh auth token)"
 export TF_VAR_billing_account="$(gcloud billing projects describe what-is-my-ip-f7210 \
   --format='value(billingAccountName)' | cut -d/ -f2)"
+export TF_VAR_budget_nok=<amount>    # monthly budget alert threshold, in NOK
 
 terraform -chdir=infra init     # once per checkout
 terraform -chdir=infra plan     # what would change? (read-only)
