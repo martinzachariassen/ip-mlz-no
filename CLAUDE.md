@@ -46,7 +46,7 @@ merge. A merge to `main` deploys to prod.
   arbitrary paths.
 - The firebase project ID (`what-is-my-ip-f7210`) is intentional and can't
   be renamed. It lives in `.firebaserc`, the workflows, `verify.sh` and
-  `infra/` (`variables.tf`, the backend in `versions.tf`, `imports.tf`).
+  `infra/` (`variables.tf`, the backend in `versions.tf`).
 - GCP IAM/WIF, APIs, and GitHub repo settings or rules are changed in
   `infra/`, never in a console. Console edits show up as drift in the next
   plan. Function code and Hosting config stay with `firebase deploy`.

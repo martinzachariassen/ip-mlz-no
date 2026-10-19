@@ -17,7 +17,7 @@ variable "region" {
 }
 
 variable "billing_account" {
-  description = "Billing account the project is charged to."
+  description = "Billing account the project is charged to. Set with TF_VAR_billing_account; deliberately not committed."
   type        = string
 }
 

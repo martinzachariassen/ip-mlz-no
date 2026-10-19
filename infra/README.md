@@ -32,7 +32,6 @@ Each file covers one topic. A good reading order:
 4. `wif.tf`: how GitHub Actions logs in to GCP without a key. This is the part
    that broke when the repo was renamed.
 5. `hosting.tf`, `budget.tf`, `github.tf`, `state.tf`.
-6. `imports.tf`: one-off, adopts the resources that existed before the code.
 
 Things worth knowing when reading:
 
@@ -56,6 +55,8 @@ GitHub. Terraform itself comes from `mise.toml`.
 # Credentials only live in the shell session. Nothing is written to disk.
 export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
 export GITHUB_TOKEN="$(gh auth token)"
+export TF_VAR_billing_account="$(gcloud billing projects describe what-is-my-ip-f7210 \
+  --format='value(billingAccountName)' | cut -d/ -f2)"
 
 terraform -chdir=infra init     # once per checkout
 terraform -chdir=infra plan     # what would change? (read-only)
@@ -70,35 +71,16 @@ service account rights to change IAM, so it could grant itself anything.
 
 ## First-time setup (done once)
 
-The configuration was written after the resources existed, so the first
-apply *imports* them instead of creating new ones.
+Terraform can't store its state in a bucket that doesn't exist yet, so the
+state bucket is created by hand once. `state.tf` imports it and owns its
+settings from then on.
 
-1. Create the state bucket. Terraform can't store its state in a bucket that
-   doesn't exist yet, so this one step is manual. `state.tf` imports the
-   bucket and owns its settings from then on.
+```sh
+gcloud storage buckets create gs://what-is-my-ip-f7210-tfstate \
+  --location=europe-west1 --uniform-bucket-level-access \
+  --public-access-prevention \
+  --project=what-is-my-ip-f7210
+```
 
-   ```sh
-   gcloud storage buckets create gs://what-is-my-ip-f7210-tfstate \
-     --location=europe-west1 --uniform-bucket-level-access \
-     --public-access-prevention \
-     --project=what-is-my-ip-f7210
-   ```
-
-2. Run `init`, `plan` and `apply` as above. The plan should show only
-   imports plus these changes:
-   - The ruleset requires `build`, `terraform`, `review dependencies` and
-     `deploy-preview`, each pinned to GitHub Actions.
-   - The state bucket gets versioning and a lifecycle rule.
-   - Terraform-only settings (`archive_on_destroy`) are recorded on the
-     repository.
-
-   Nothing should be destroyed.
-
-3. Remove the old classic branch protection. The ruleset now holds every
-   rule, and keeping both means two places to update.
-
-   ```sh
-   gh api -X DELETE repos/martinzachariassen/ip-mlz-no/branches/main/protection
-   ```
-
-4. Delete `imports.tf` and commit. Every import block is a no-op from here on.
+The rest of the setup was adopted into Terraform with one-off `import`
+blocks, which have since been removed.
