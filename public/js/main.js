@@ -49,11 +49,10 @@ async function fetchIP() {
   if (params.has("v4")) return PLACEHOLDER_IP.v4;
 
   const res = await fetch("/ip", {
-    headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`/ip responded ${res.status}`);
-  const { ip } = await res.json();
+  const ip = (await res.text()).trim();
   if (!ip) throw new Error("/ip returned no address");
   return ip;
 }

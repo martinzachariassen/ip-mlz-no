@@ -38,18 +38,12 @@ Open the page, or call the endpoint directly:
 ```sh
 curl https://ip.mlz.no/ip
 # 203.0.113.9
-
-curl -H 'Accept: application/json' https://ip.mlz.no/ip
-# {"ip":"203.0.113.9","family":"v4"}
 ```
 
 Use `https://` (or `curl -L`): plain `http://` gets Hosting's 301 redirect
-rather than the address. Plain text is the default, so a bare `curl` gets a single line and errors
-come back readable rather than as JSON. `family` is `v4` or `v6`. Anything
-but `GET` or `HEAD` answers `405`, and the endpoint is rate limited to 20
-requests per minute per address — past that it answers `429` with
-`Retry-After`. Responses are never cached (`Cache-Control: no-store,
-private`, `Vary: Accept`).
+rather than the address. The response is the bare address as plain text.
+Anything but `GET` or `HEAD` answers `405`. Responses are never cached
+(`Cache-Control: no-store, private`).
 
 ## Requirements
 
@@ -110,38 +104,20 @@ per-visitor by definition, so there is nothing a cache could usefully hold.
 That also means every hit reaches the function rather than Hosting's CDN,
 which makes `/ip` the one part of the site with a per-request cost — the
 abuse story here is a cost story rather than a data one, since the address
-is only ever handed back to the caller who owns it. Three things bound it,
+is only ever handed back to the caller who owns it. Two things bound it,
 in `functions/index.js`:
 
 - **`maxInstances: 1`** with **`concurrency: 250`** — the hard ceiling. The
   handler is a header read, so throughput is bought with concurrency (free,
   per-instance) instead of instances (billed), and one instance still
-  absorbs 250 concurrent requests — far past anything this site sees. This
-  is the limit that actually holds, and it is pinned in code so a redeploy
-  can't drift off it.
+  absorbs 250 concurrent requests — far past anything this site sees. It is
+  pinned in code so a redeploy can't drift off it.
 - **`timeoutSeconds: 10`** — an echo needs nothing near the platform
   maximum, and a short timeout is what stops a slow-reader flood from
   parking instances.
-- **A per-instance rate limit**, 20 requests per minute per address, in
-  memory: no Redis, no Firestore, no extra bill. Keys are validated
-  addresses (at most 45 bytes) and capped at 20 000 per window, so the map
-  can't grow past a few MB. With `maxInstances` at 1
-  there is one instance holding one map, so 20 is a flat limit rather than
-  20 × live instances — an equivalence that is load-bearing, since raising
-  `maxInstances` loosens the limit by exactly that factor. On the raw Cloud
-  Run URL the key is still spoofable, so it remains a speed bump with
-  `maxInstances` as the wall behind it.
 
-20/min is deliberately close to the bone: a page load costs exactly one
-request (every other asset is static and CDN-served), so even someone
-leaning on refresh doesn't approach it. What sets the floor isn't the
-individual user but carrier-grade NAT — a mobile network can put many
-subscribers behind one IPv4, and they share a bucket.
-
-Under the emulator the limiter skips loopback, so local dev and CI's
-readiness polling don't throttle themselves. The exemption is gated on
-`FUNCTIONS_EMULATOR`, so production has no loopback hole; CI proves the real
-limit by flooding under a spoofed `X-Forwarded-For` instead.
+There is no rate limiter: the budget alert in `infra/budget.tf` and the
+instance ceiling are the whole defence.
 
 Ingress stays `ALLOW_ALL`: `ALLOW_INTERNAL_AND_GCLB` would block the
 `cloudfunctions.net` URL that Hosting's own rewrite goes through. The raw
@@ -153,9 +129,8 @@ header, so the address the page shows is the real one.
 [`scripts/verify.sh`](scripts/verify.sh) boots the Hosting + Functions
 emulators and asserts that headers, cache rules, and `/ip` actually behave as
 configured — `firebase.json`'s `headers` list is last-match-wins, so a
-reorder could silently break a rule. It also floods `/ip` under a spoofed
-address to prove the rate limit answers 429 at its real production value,
-and checks that a forwarded value that isn't an address is refused.
+reorder could silently break a rule. It also checks that a forwarded value
+that isn't an address is refused.
 
 That script is the whole quality gate, and all three places that care run
 the identical file: locally, in CI (`.github/workflows/ci.yml`, on every PR

@@ -34,13 +34,10 @@ merge. A merge to `main` deploys to prod.
 
 ## Invariants: don't break these
 
-- `maxInstances: 1` is what makes the in-memory rate limit (20/min/address)
-  a flat limit. Raising it loosens the limit by the same factor.
+- `maxInstances: 1` is the cost ceiling; there is no rate limiter behind it.
 - The function must validate the forwarded address (`normalize()`) before
-  echoing it or using it as a rate-limit key. On the raw Cloud Run URL,
-  X-Forwarded-For is caller-controlled.
-- `/ip` responses stay `no-store` with `Vary: Accept` (plain text by default,
-  JSON on `Accept: application/json`).
+  echoing it. On the raw Cloud Run URL, X-Forwarded-For is caller-controlled.
+- `/ip` returns the bare address as plain text and stays `no-store`.
 - `firebase.json` `headers` is **last-match-wins**: catch-all first,
   specific overrides after.
 - CSP is `'self'` only: no inline scripts or styles, no third-party assets.

@@ -84,23 +84,10 @@ else
   bad "/ip did not return a bare address (got: $plain)"
 fi
 
-json="$(curl -s -H 'Accept: application/json' "$base/ip")"
-if echo "$json" | grep -q '"ip"'; then
-  ok "/ip returns JSON when asked"
-else
-  bad "/ip did not return JSON (got: $json)"
-fi
-
 if headers "$base/ip" | grep -qi '^cache-control:.*no-store'; then
   ok "/ip is not cached"
 else
   bad "/ip is missing no-store"
-fi
-
-if headers "$base/ip" | grep -qi '^vary:.*accept'; then
-  ok "/ip varies on Accept"
-else
-  bad "/ip is missing Vary: Accept"
 fi
 
 if headers "$base/ip" | grep -qi '^x-robots-tag:.*noindex'; then
@@ -117,9 +104,8 @@ else
   bad "/ip accepted a forwarded value that isn't an address (status $status)"
 fi
 
-mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' \
-  -H 'Accept: application/json' "$base/ip")"
-if echo "$mapped" | grep -q '"ip":"198.51.100.7","family":"v4"'; then
+mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' "$base/ip")"
+if [ "$mapped" = "198.51.100.7" ]; then
   ok "/ip unwraps IPv4-mapped IPv6"
 else
   bad "/ip did not unwrap IPv4-mapped IPv6 (got: $mapped)"
@@ -130,26 +116,6 @@ if [ "$status" = "405" ]; then
   ok "/ip rejects POST"
 else
   bad "/ip accepted POST (status $status)"
-fi
-
-# Spoofed address, because the function exempts loopback in the emulator.
-seen429=0
-for _ in $(seq 1 60); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' \
-    -H 'X-Forwarded-For: 203.0.113.9' "$base/ip")"
-  if [ "$code" = "429" ]; then seen429=1; break; fi
-done
-if [ "$seen429" = "1" ]; then
-  ok "/ip rate limits a flood from one address"
-else
-  bad "/ip served 60 rapid requests from one address without limiting"
-fi
-
-if [ "$(curl -s -o /dev/null -w '%{http_code}' \
-      -H 'X-Forwarded-For: 203.0.113.9' "$base/ip")" = "429" ]; then
-  ok "a limited address stays limited"
-else
-  bad "a flooded address was served again immediately"
 fi
 
 if [ "$fail" -ne 0 ]; then
