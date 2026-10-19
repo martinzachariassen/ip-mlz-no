@@ -57,6 +57,12 @@ merge. A merge to `main` deploys to prod.
 - WIF matches on the repository's numeric ID (`infra/wif.tf`), not its name,
   so a rename can't break deploys again.
 
+## Comments
+
+No comments in code, config or other files unless strictly necessary
+(a non-obvious *why* that the code can't express). Don't add explanatory,
+narrating or section-divider comments.
+
 ## Frontend preview
 
 `?v4`, `?v6`, `?fail` on the page URL render a documentation address or the

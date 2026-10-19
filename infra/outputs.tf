@@ -1,5 +1,3 @@
-# Values printed after apply, and on demand with `terraform output`.
-
 output "workload_identity_provider" {
   description = "Full provider name, as used by google-github-actions/auth."
   value       = google_iam_workload_identity_pool_provider.github.name

@@ -1,21 +1,9 @@
 #!/usr/bin/env bash
-#
-# Boots the Hosting + Functions emulators and asserts what firebase.json
-# can't check itself — notably that `headers` is last-match-wins, so a
-# reorder could silently let the catch-all max-age=0 clobber a specific
-# cache rule.
-#
-# Run it locally exactly as CI does:
-#
-#   ./scripts/verify.sh
-#
-# Requires `bun install` and `(cd functions && npm ci)` to have run first.
 set -euo pipefail
 
 PORT="${PORT:-5050}"
 PROJECT="${PROJECT:-what-is-my-ip-f7210}"
 
-# Paths below are repo-relative, and the emulators need firebase.json in cwd.
 cd "$(dirname "$0")/.."
 
 base="http://127.0.0.1:$PORT"
@@ -26,8 +14,6 @@ bunx firebase-tools emulators:start --only hosting,functions \
 server=$!
 trap 'kill "$server" 2>/dev/null || true' EXIT
 
-# Wait up to 60s for the emulator to bind. Bail out loudly if it never does,
-# rather than letting every check below fail with no hint as to why.
 up=0
 for _ in $(seq 1 120); do
   if curl -sf -o /dev/null "$base/"; then up=1; break; fi
@@ -40,17 +26,9 @@ if [ "$up" != "1" ]; then
   exit 1
 fi
 
-# Hosting answers before the (npm-installed, cold-started) Functions
-# emulator has finished parsing and registering the function, so /ip can
-# 404 with "does not exist" for a few seconds after Hosting is already up.
-#
-# `! ... | grep -q` and not `grep -qv`: -qv succeeds when *any* line fails
-# to match, so a multi-line error page would have broken this loop on the
-# first poll and let a not-yet-registered function through as "ready".
-#
-# Polling freely is safe because the function exempts loopback from its
-# rate limit under the emulator; the flood test at the end spoofs an
-# address precisely so it isn't sharing this budget.
+# Hosting is up before the Functions emulator registers /ip, which 404s with
+# "does not exist" until then. `! ... | grep -q`, not `grep -qv`: -qv succeeds
+# when any line fails to match, so a multi-line error page would pass as ready.
 for _ in $(seq 1 60); do
   curl -s "$base/ip" | grep -q "does not exist" || break
   sleep 1
@@ -60,10 +38,8 @@ fail=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fail=1; }
 
-# Response headers for a URL, one per line.
 headers() { curl -s -D - -o /dev/null "$1"; }
 
-# Catches a deleted/mistyped header, otherwise invisible until someone scans the site.
 for header in content-security-policy strict-transport-security x-content-type-options x-frame-options referrer-policy permissions-policy cross-origin-opener-policy; do
   if headers "$base/" | grep -qi "^$header:"; then
     ok "header $header present"
@@ -72,7 +48,6 @@ for header in content-security-policy strict-transport-security x-content-type-o
   fi
 done
 
-# 404.html's filename is the whole contract with Hosting; a rename degrades silently.
 status="$(curl -s -o /dev/null -w '%{http_code}' "$base/nope")"
 if [ "$status" = "404" ] && curl -s "$base/nope" | grep -q 'class="notfound"'; then
   ok "unknown path serves the custom 404 page"
@@ -80,22 +55,19 @@ else
   bad "unknown path did not serve the custom 404 page (status $status)"
 fi
 
-# Confirms firebase.json's ignore list keeps it from ever being served.
 if [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/firebase.json")" = "404" ]; then
   ok "firebase.json is not served"
 else
   bad "firebase.json is served"
 fi
 
-# Without revalidation, a deploy could stay invisible for Hosting's default hour of caching.
 if headers "$base/" | grep -qi '^cache-control:.*must-revalidate'; then
   ok "HTML is revalidated"
 else
   bad "HTML is not revalidated"
 fi
 
-# Favicon has a stable URL, so it must not be immutable (200 checked
-# first so a missing/renamed file can't pass this vacuously).
+# 200 is checked first so a missing file can't pass the immutable check.
 favicon="$base/assets/icons/favicon.svg"
 if [ "$(curl -s -o /dev/null -w '%{http_code}' "$favicon")" != "200" ]; then
   bad "favicon is not served (cannot check its cache policy)"
@@ -105,7 +77,6 @@ else
   ok "favicon is served and not immutable"
 fi
 
-# /ip: plain text by default (curl-friendly), JSON on request, never cached.
 plain="$(curl -s "$base/ip")"
 if echo "$plain" | grep -qE '^[0-9a-fA-F:.]+$'; then
   ok "/ip returns a bare address as plain text"
@@ -126,8 +97,6 @@ else
   bad "/ip is missing no-store"
 fi
 
-# Same URL, two representations — an intermediary that ignored this would
-# hand a curl user someone else's JSON.
 if headers "$base/ip" | grep -qi '^vary:.*accept'; then
   ok "/ip varies on Accept"
 else
@@ -140,9 +109,6 @@ else
   bad "/ip is missing X-Robots-Tag: noindex"
 fi
 
-# X-Forwarded-For is caller-controlled on the raw Cloud Run URL; anything
-# that isn't an address must be refused, not echoed or used as a
-# rate-limit key.
 status="$(curl -s -o /dev/null -w '%{http_code}' \
   -H 'X-Forwarded-For: not-an-address' "$base/ip")"
 if [ "$status" = "502" ]; then
@@ -151,7 +117,6 @@ else
   bad "/ip accepted a forwarded value that isn't an address (status $status)"
 fi
 
-# IPv4-mapped IPv6 is reported as the IPv4 it carries.
 mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' \
   -H 'Accept: application/json' "$base/ip")"
 if echo "$mapped" | grep -q '"ip":"198.51.100.7","family":"v4"'; then
@@ -160,7 +125,6 @@ else
   bad "/ip did not unwrap IPv4-mapped IPv6 (got: $mapped)"
 fi
 
-# Nothing mutates, so anything but a read is a probe.
 status="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$base/ip")"
 if [ "$status" = "405" ]; then
   ok "/ip rejects POST"
@@ -168,10 +132,7 @@ else
   bad "/ip accepted POST (status $status)"
 fi
 
-# Floods under a spoofed address (TEST-NET-3, RFC 5737) rather than the
-# runner's own. The function exempts loopback in the emulator, so every
-# check above ran unlimited and this one still measures the real
-# production limit — no relaxed-for-CI value to drift from.
+# Spoofed address, because the function exempts loopback in the emulator.
 seen429=0
 for _ in $(seq 1 60); do
   code="$(curl -s -o /dev/null -w '%{http_code}' \
@@ -184,9 +145,6 @@ else
   bad "/ip served 60 rapid requests from one address without limiting"
 fi
 
-# The exemption is emulator-only and keyed on loopback, so a request that
-# names any other address must still be counted — otherwise the limiter is
-# off in production and this suite would never notice.
 if [ "$(curl -s -o /dev/null -w '%{http_code}' \
       -H 'X-Forwarded-For: 203.0.113.9' "$base/ip")" = "429" ]; then
   ok "a limited address stays limited"

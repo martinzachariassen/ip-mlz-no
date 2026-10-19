@@ -1,7 +1,3 @@
-# Inputs. Every one has a default, so `terraform plan` needs no -var flags or
-# .tfvars file — these are here to name things once, not to make the
-# configuration reusable for other projects.
-
 variable "project_id" {
   description = "GCP/Firebase project. Fixed: project IDs can't be renamed."
   type        = string

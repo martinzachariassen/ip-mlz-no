@@ -1,9 +1,6 @@
 import { copyText } from "./clipboard.js";
 import { buildCells, groupCells, scramble } from "./scramble.js";
 
-// ---- constants ----
-
-// RFC 5737 / RFC 3849 documentation addresses, for the preview params below.
 const PLACEHOLDER_IP = {
   v4: "203.0.113.42",
   v6: "2001:db8:cebd:8e40:1c2b:9f3a:44de:1",
@@ -11,8 +8,6 @@ const PLACEHOLDER_IP = {
 
 const SHORTCUT_HINT = "press C to copy plain · R for CIDR";
 
-// Long enough to ride out a Cloud Functions cold start, short enough that a
-// hung connection ends in the failure state rather than a blank page.
 const FETCH_TIMEOUT_MS = 15_000;
 
 const TIMING = {
@@ -22,12 +17,8 @@ const TIMING = {
   },
 };
 
-// An offscreen clone of .ip-display, rendered at a fixed 100px so its
-// measured width can be divided back down to an em multiplier — the one
-// number CSS can't work out for itself (see --adv4/--adv6 in ip-display.css).
+// Width measured at this size becomes the em multiplier behind --adv4/--adv6.
 const RULER_PX = 100;
-
-// ---- elements & state ----
 
 const ipBtn = document.getElementById("ip");
 const ipText = document.getElementById("ip-text");
@@ -37,12 +28,9 @@ const metaText = document.getElementById("meta-text");
 const statusEl = document.getElementById("status");
 const heroEl = document.querySelector(".hero");
 
-// Read back from tokens.css so the IP value and meta line exit in sync.
 const EXIT_MS =
   parseFloat(getComputedStyle(ipBtn).getPropertyValue("--ip-exit")) || 0;
 
-// `family` is read off the address itself, not chosen — a single connection
-// only ever tells you the one it came in on.
 const state = {
   ip: "",
   family: "v4",
@@ -53,12 +41,6 @@ const state = {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ---- lookup ----
-
-// Preview params, handy for checking the v6 layout and the failure state
-// without real dual-stack routing: ?v4, ?v6 show a documentation address,
-// ?fail forces the error state. They only change what this tab renders —
-// /ip is never called — so they're left working in production too.
 const params = new URLSearchParams(location.search);
 
 async function fetchIP() {
@@ -75,8 +57,6 @@ async function fetchIP() {
   if (!ip) throw new Error("/ip returned no address");
   return ip;
 }
-
-// ---- copy & announcements ----
 
 function setCopyable(copyable) {
   state.copyable = copyable;
@@ -155,7 +135,6 @@ ipBtn.addEventListener("click", dropPointerFocus);
 ipBtn.addEventListener("click", copyIP);
 
 document.addEventListener("keydown", (e) => {
-  // Held keys auto-repeat; one press, one copy.
   if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
 
   const t = e.target;
@@ -176,8 +155,6 @@ document.addEventListener("keydown", (e) => {
     copyCIDR();
   }
 });
-
-// ---- type fitting ----
 
 const rulerBox = document.createElement("span");
 rulerBox.className = "ip-display";
@@ -238,8 +215,6 @@ function measureAdvances() {
     heroEl.style.removeProperty("--adv6h");
   }
 }
-
-// ---- render ----
 
 function render() {
   const { ip, family } = state;

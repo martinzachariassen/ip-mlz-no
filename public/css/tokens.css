@@ -1,4 +1,3 @@
-/* ---- design tokens (from mlz.no) ---- */
 :root {
   --bg: oklch(0.95 0.006 250);
   --fg: oklch(0.18 0.006 250);
@@ -12,12 +11,8 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-expo: cubic-bezier(0.19, 1, 0.22, 1);
 
-  /* Fluid rather than fixed: a comfortable 20px frame at 1440px would be a
-     fifth of the usable width at 320px. */
   --gutter: clamp(12px, 4vw, 32px);
 
-  /* Read back by main.js so the IP value and meta line exit in sync —
-     style.css stays the single source of truth for the timing. */
   --ip-exit: 110ms;
 
   color-scheme: light;

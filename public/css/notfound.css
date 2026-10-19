@@ -1,7 +1,4 @@
-/* ---- 404 page ---- */
-/* No min-height: body already fills the viewport and centres its child.
-   Repeating 100svh here, on top of body's padding, overflowed the page and
-   put a scrollbar on a two-line 404. */
+/* No min-height: repeating 100svh on top of body's padding adds a scrollbar. */
 .notfound {
   display: flex;
   flex-direction: column;

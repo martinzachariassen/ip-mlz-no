@@ -1,8 +1,3 @@
-# Monthly budget with e-mail alerts to the billing account's admins.
-#
-# A budget is a smoke alarm, not a cap: spending continues past 100 %. The
-# real cost ceiling is maxInstances: 1 in functions/index.js.
-
 data "google_billing_account" "this" {
   billing_account = var.billing_account
 }

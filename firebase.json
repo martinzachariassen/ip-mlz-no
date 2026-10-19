@@ -1,9 +1,4 @@
 {
-  // Hosting serves public/ as static files, as-is — no build step for the
-  // frontend. The one dynamic path is /ip, rewritten to a Cloud Function
-  // that echoes the caller's real address; everything else here is the
-  // security hardening and cache policy that a static site has nowhere
-  // else to declare.
   "hosting": {
     "public": "public",
     "ignore": [
@@ -22,8 +17,7 @@
         }
       }
     ],
-    // Order matters — last match wins. The catch-all comes first and the
-    // path-specific overrides after it.
+    // Last match wins: catch-all first, overrides after.
     "headers": [
       {
         "source": "**",
@@ -62,9 +56,6 @@
           }
         ]
       },
-      // Fonts and icons keep stable URLs across deploys — nothing here is
-      // content-hashed (no build step) — so they get a day of caching
-      // rather than immutability.
       {
         "source": "**/*.@(png|svg|woff2|ico|webmanifest)",
         "headers": [
@@ -74,8 +65,6 @@
           }
         ]
       },
-      // /ip is per-visitor data — it must never be cached, by a browser or
-      // by Hosting's CDN.
       {
         "source": "/ip",
         "headers": [
@@ -99,9 +88,7 @@
       ]
     }
   ],
-  // Pinned ports rather than the CLI defaults, so CI has a fixed address to
-  // curl against. Hosting is on 5050, not the CLI's 5000: macOS's AirPlay
-  // Receiver listens on 5000, so the default fails to bind on a Mac.
+  // 5050, not the default 5000: macOS AirPlay Receiver holds it.
   "emulators": {
     "hosting": {
       "port": 5050

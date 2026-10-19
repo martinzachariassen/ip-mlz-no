@@ -1,5 +1,3 @@
-/* ---- reduced motion ---- */
-/* Gentler, not zero — colour still carries the meaning, only movement goes. */
 @media (prefers-reduced-motion: reduce) {
   .ip-display {
     transition-duration: 0.01ms;

@@ -5,7 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # One grouped PR per week keeps the noise down
     groups:
       bun:
         patterns: ["*"]
@@ -32,8 +31,7 @@ updates:
     commit-message:
       prefix: "chore"
 
-  # Provider versions in infra/ (versions.tf + .terraform.lock.hcl). CI only
-  # validates them: run `terraform plan` locally before merging these.
+  # CI only validates these: run `terraform plan` locally before merging.
   - package-ecosystem: "terraform"
     directory: "/infra"
     schedule:

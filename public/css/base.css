@@ -1,4 +1,3 @@
-/* ---- reset-ish ---- */
 * {
   box-sizing: border-box;
 }
@@ -8,19 +7,15 @@ body {
 }
 
 html {
-  /* Stops iOS inflating text after a rotate — the layout already fits
-     itself to the viewport. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  /* svh is the viewport with browser chrome expanded, so a centred layout
-     sized to it stays visible at rest; dvh would re-centre the page every
-     time the toolbar slides. Plain vh is the fallback for older browsers. */
+  /* svh, not dvh: dvh would re-centre the page whenever the toolbar slides. */
   min-height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: deliberate fallback, see above */
+  /* biome-ignore lint/suspicious/noDuplicateProperties: vh fallback for older browsers */
   min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
@@ -31,8 +26,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Insets and gutter are added, not max()'d, so a landscape notch in
-     either side clears both. */
   padding: calc(var(--gutter) + env(safe-area-inset-top))
     calc(var(--gutter) + env(safe-area-inset-right))
     calc(var(--gutter) + env(safe-area-inset-bottom))
@@ -56,7 +49,6 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---- utilities ---- */
 .sr-only {
   position: absolute;
   width: 1px;

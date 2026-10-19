@@ -3,9 +3,7 @@ export async function copyText(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // Fallback for contexts without the async Clipboard API. Selecting the
-    // textarea moves focus, so hand it back afterwards — otherwise a
-    // keyboard user is dropped back to the top of the page.
+    // Selecting the textarea steals focus; restore it for keyboard users.
     const previous = document.activeElement;
     const ta = document.createElement("textarea");
     try {

@@ -4,8 +4,6 @@ const SEPARATOR = /[.:]/;
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 
-// The in-flight animation frame per element, so a new scramble on the same
-// element cancels the previous one rather than racing it.
 const frames = new WeakMap();
 
 export function groupCells(cells) {
@@ -33,9 +31,6 @@ export function buildCells(target) {
   });
 }
 
-// Reveals `target` character by character, staggered, settling on a random
-// glyph from `pool` before locking each cell in. `perpetual` skips locking
-// entirely, for the failure state's endless churn.
 export function scramble(el, target, opts = {}) {
   const {
     duration = 900,

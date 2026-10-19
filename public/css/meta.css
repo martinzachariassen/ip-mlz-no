@@ -1,9 +1,5 @@
-/* ---- meta line ---- */
-/* Does double duty: the copy shortcuts at rest, copy confirmation on demand —
-   the only spare text slot on the page, so reusing it beats a toast.
-   min-height reserves the row so neither job shifts the layout. */
 .meta {
-  position: relative; /* the hover hint stacks on the row, not in it */
+  position: relative;
   align-self: stretch;
   margin: 20px 0 0;
   min-height: 1.2em;
@@ -17,8 +13,6 @@
   color: var(--accent-deep);
 }
 
-/* Shares --ip-exit with the IP value so the two read as one object
-   changing, not two elements animating near each other. */
 .meta-text {
   display: inline-block;
   transition:
@@ -33,11 +27,6 @@
   transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
 }
 
-/* "tap to copy", for touch devices only. Out of flow and pinned across the
-   row so it overlays the (hidden) meta text instead of nudging it off
-   centre. Hidden by default; the coarse-pointer rule below stands it up
-   while the address is copyable, and it slides back in after a copy
-   confirmation clears. */
 .copy-hint {
   position: absolute;
   left: 0;
@@ -52,8 +41,6 @@
     translate 320ms var(--ease-expo);
 }
 
-/* On a device with hover and a keyboard the meta line carries the C/R
-   shortcuts instead, so the touch hint never renders there. */
 .copy-hint-coarse {
   display: none;
 }

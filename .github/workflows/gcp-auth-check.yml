@@ -1,15 +1,8 @@
 name: GCP auth check
 
-# Weekly check that GitHub can still log in to GCP and read what deploy.yml
-# needs. The login can break with no code change at all: renaming the repo
-# broke the WIF condition and failed every deploy on main. Without a PR,
-# nothing else would notice until the next merge. Run it by hand from the
-# Actions tab after applying changes to infra/wif.tf.
-#
-# Read-only: it lists resources and deploys nothing.
 on:
   schedule:
-    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+    - cron: "17 6 * * 1"
   workflow_dispatch:
 
 env:
@@ -17,7 +10,6 @@ env:
 
 permissions:
   contents: read
-  # Required for GitHub to mint the OIDC token that WIF exchanges.
   id-token: write
 
 jobs:
@@ -43,7 +35,6 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
-      # One read call per product the deploy touches, so a lost role fails here.
       - name: Check Hosting access
         run: bunx firebase-tools hosting:channel:list --project "$PROJECT" --non-interactive
 

@@ -1,16 +1,10 @@
-# The GCP project itself, Firebase on top of it, and the APIs the site uses.
-
 resource "google_project" "this" {
   project_id      = var.project_id
   name            = var.project_name
   billing_account = var.billing_account
 
-  # No `labels`: the firebase=enabled / firebase-core labels are set by
-  # Firebase itself, and declaring them here would only make Terraform claim
-  # ownership of something it doesn't control.
+  # No `labels`: Firebase sets its own and Terraform must not claim them.
 
-  # Deleting the project would take the site, the function and all IAM with
-  # it. Terraform refuses to even plan that.
   deletion_policy = "PREVENT"
 
   lifecycle {
@@ -23,27 +17,24 @@ resource "google_firebase_project" "this" {
   project  = google_project.this.project_id
 }
 
-# Only the APIs the site actually depends on. GCP switches on a dozen more by
-# default (BigQuery, Datastore, ...); those are left alone rather than
-# managed, since disabling them buys nothing.
 locals {
   services = toset([
-    "artifactregistry.googleapis.com", # function container images
-    "billingbudgets.googleapis.com",   # budget.tf
+    "artifactregistry.googleapis.com",
+    "billingbudgets.googleapis.com",
     "cloudbilling.googleapis.com",
-    "cloudbuild.googleapis.com", # builds the function on deploy
+    "cloudbuild.googleapis.com",
     "cloudfunctions.googleapis.com",
     "cloudresourcemanager.googleapis.com",
-    "eventarc.googleapis.com", # required by 2nd-gen functions
+    "eventarc.googleapis.com",
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
     "iam.googleapis.com",
-    "iamcredentials.googleapis.com", # WIF service-account impersonation
+    "iamcredentials.googleapis.com",
     "pubsub.googleapis.com",
-    "run.googleapis.com", # 2nd-gen functions run on Cloud Run
+    "run.googleapis.com",
     "serviceusage.googleapis.com",
-    "storage.googleapis.com", # function sources, Terraform state
-    "sts.googleapis.com",     # WIF token exchange
+    "storage.googleapis.com",
+    "sts.googleapis.com",
   ])
 }
 
@@ -53,7 +44,5 @@ resource "google_project_service" "this" {
   project = google_project.this.project_id
   service = each.value
 
-  # Removing a line here stops Terraform managing the API; it doesn't switch
-  # it off under the running site.
   disable_on_destroy = false
 }

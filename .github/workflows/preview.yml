@@ -1,16 +1,5 @@
 name: Preview
 
-# Deploys public/ to a temporary Firebase Hosting preview channel for every
-# PR. This catches what CI's emulator run can't: a broken GCP login (WIF
-# condition, service-account binding) or missing Hosting permissions. Merging
-# to main means shipping to prod, so that breakage has to show up here first.
-#
-# Only Hosting goes to the channel. Preview channels can't host functions, so
-# /ip on the preview URL calls the live production function.
-#
-# Same keyless WIF auth and repo variables as deploy.yml, but without the
-# protected `production` environment. `deploy-preview` is a required check
-# on main (infra/github.tf).
 on:
   pull_request:
 
@@ -19,7 +8,6 @@ env:
 
 permissions:
   contents: read
-  # Required for GitHub to mint the OIDC token that WIF exchanges.
   id-token: write
 
 concurrency:
@@ -29,9 +17,7 @@ concurrency:
 jobs:
   deploy-preview:
     name: deploy-preview
-    # GitHub doesn't give fork or Dependabot PRs an OIDC token, so the login
-    # would fail. Neither changes the deploy setup, so skip them (a skipped
-    # job counts as passing).
+    # Fork and Dependabot PRs get no OIDC token; a skipped job counts as passing.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]'
@@ -58,8 +44,6 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
-      # One channel per PR, reused on every push, deleted automatically after
-      # 7 days so nothing piles up.
       - name: Deploy to preview channel
         id: deploy
         env:
@@ -75,8 +59,6 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Preview: $url (expires in 7 days)" >> "$GITHUB_STEP_SUMMARY"
 
-      # Cheap check that the channel really serves this PR's files with the
-      # security headers attached.
       - name: Smoke test preview
         env:
           URL: ${{ steps.deploy.outputs.url }}

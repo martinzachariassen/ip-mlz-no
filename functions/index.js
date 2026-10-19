@@ -1,42 +1,19 @@
 const { isIP } = require("node:net");
 const { onRequest } = require("firebase-functions/v2/https");
 
-// ALLOW_INTERNAL_AND_GCLB would block this function's own cloudfunctions.net
-// URL, which is also the path Firebase Hosting's rewrite uses internally —
-// so ingress has to stay ALLOW_ALL. That means someone could hit the raw
-// Cloud Run URL directly with a spoofed X-Forwarded-For; harmless for the
-// answer itself (nothing downstream trusts this endpoint's address for
-// anything but display), but it does mean the rate limit below is only a
-// speed bump on that path. `maxInstances` is the ceiling that actually
-// holds, and it is a cost ceiling, not just a traffic one.
-//
-// Every one of these is set explicitly rather than left to the CLI's
-// defaults: an unpinned maxInstances is the difference between a bad day
-// and a bad invoice, and drift between deployed config and this file is
-// invisible until it matters.
 exports.ip = onRequest(
   {
     region: "europe-west1",
     cors: false,
-    // The handler is a header read and a string split. One instance can
-    // absorb a lot of it, so buy throughput with concurrency (cheap — it
-    // is per-instance) rather than with instances (billed).
     concurrency: 250,
-    // One instance is therefore 250 concurrent requests — orders of
-    // magnitude past anything this site sees, since a page load costs
-    // exactly one request and every other asset is CDN-served. Pinning it
-    // at 1 rather than 3 cuts the worst-case monthly bill to a third, and
-    // buys something worth more than the money: with a single instance the
-    // rate limit below stops being an approximation (see there).
+    // Keeps the in-memory rate limit flat and is the real cost ceiling:
+    // raising it loosens the limit by the same factor.
     maxInstances: 1,
     memory: "256MiB",
-    // 60s is the platform default and far more than an echo needs. A short
-    // timeout is what stops a slow-reader flood from parking instances.
     timeoutSeconds: 10,
     minInstances: 0,
   },
   (req, res) => {
-    // Nothing here mutates anything, so anything but a read is a probe.
     if (req.method !== "GET" && req.method !== "HEAD") {
       res.set("Allow", "GET, HEAD");
       res.status(405).type("text/plain").send("method not allowed\n");
@@ -49,18 +26,11 @@ exports.ip = onRequest(
         .split(",")[0]
         .trim() ||
         req.socket?.remoteAddress ||
-        // The emulator's local dispatch has no real socket, so there's no
-        // X-Forwarded-For and no remoteAddress to fall back to either — only
-        // real traffic through Google's front end sets those.
         (process.env.FUNCTIONS_EMULATOR === "true" ? "127.0.0.1" : ""),
     );
 
-    // Never cached — by a browser, by Hosting's CDN, or by anything in
-    // between. `Vary` because the same URL answers in two formats.
     res.set("Cache-Control", "no-store, private");
     res.set("Vary", "Accept");
-    // The address is the caller's own, but there is no reason for it to
-    // turn up in a search index via some proxy that mirrors the endpoint.
     res.set("X-Robots-Tag", "noindex");
 
     if (!address) {
@@ -80,30 +50,16 @@ exports.ip = onRequest(
   },
 );
 
-// The longest textual address there is: an IPv4-mapped IPv6 written out in
-// full ("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255").
 const MAX_ADDRESS_LENGTH = 45;
 
-// Returns a syntactically valid IP address, or "" if `raw` isn't one.
-//
-// On the raw Cloud Run URL X-Forwarded-For is whatever the caller sends, so
-// without this an arbitrary string would be echoed back as "your address"
-// and — worse — used as a rate-limit key: MAX_TRACKED keys of several KB
-// each is more than the instance's 256MiB, which is exactly the OOM the
-// limiter's cap exists to prevent. Validating here bounds every key to 45
-// bytes and guarantees the plain-text answer is a bare address.
-//
-// IPv4-mapped IPv6 (::ffff:203.0.113.9) is unwrapped to the IPv4 it carries,
-// so it's reported — and rendered — as the v4 address it really is.
+// X-Forwarded-For is caller-controlled on the raw Cloud Run URL. Validating
+// keeps junk from being echoed and bounds every rate-limit key to 45 bytes.
 function normalize(raw) {
   if (raw.length > MAX_ADDRESS_LENGTH || isIP(raw) === 0) return "";
   const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(raw);
   return mapped && isIP(mapped[1]) === 4 ? mapped[1] : raw;
 }
 
-// curl's default Accept is `*/*`, so it gets plain text; the front end asks
-// for JSON explicitly. Errors follow the same rule, so a curl user gets a
-// readable line rather than a JSON blob they didn't ask for.
 function respond(req, res, status, body) {
   res.status(status);
   if ((req.headers.accept || "").includes("application/json")) {
@@ -114,45 +70,18 @@ function respond(req, res, status, body) {
   }
 }
 
-// ---- rate limiting ----
-//
-// Per-instance and in-memory: no Redis, no Firestore, no extra bill, and no
-// dependency for a site whose whole backend is twelve lines of header
-// reading. Per-instance state would normally make the true ceiling
-// WINDOW_MAX × live instances rather than WINDOW_MAX flat — but maxInstances
-// is 1, so there is one instance holding one map and the limit is the flat
-// number it reads as. That equivalence is load-bearing: raising maxInstances
-// loosens this limit by exactly that factor, silently.
-//
-// Still a mitigation rather than a gate, because the key is the caller's
-// claimed address: on the raw Cloud Run URL, where X-Forwarded-For isn't
-// overwritten by Google's front end, an attacker can rotate it and never
-// share a bucket. maxInstances is the wall behind this.
 const WINDOW_MS = 60_000;
-// One page load is exactly one request — the frontend fetches /ip once and
-// every other asset comes off Hosting's CDN. So the honest budget for a
-// human is single digits per minute, and 20 is already generous for someone
-// leaning on refresh. The floor on how low this can go isn't the individual
-// user, it's carrier-grade NAT: a mobile network can put a lot of people
-// behind one IPv4, and they all key on the same bucket.
 const WINDOW_MAX = 20;
-// A flood from many distinct addresses would otherwise grow this map without
-// bound and OOM the instance — which is the outage the limiter exists to
-// prevent. Past the cap we stop tracking new addresses and fail open.
+// Past the cap new addresses go untracked (fail open) so a flood from many
+// addresses can't OOM the instance.
 const MAX_TRACKED = 20_000;
 
 let windowStart = Date.now();
 let hits = new Map();
 
-// Returns null when the caller is under the limit, or the number of seconds
-// until the window rolls over when it isn't.
 function rateLimit(address) {
-  // No front end sets X-Forwarded-For in the emulator, so every local request
-  // keys on the same loopback address — a dev session, or CI's readiness
-  // polling, would rate limit itself before it got to what it was testing.
-  // Requests that carry an explicit X-Forwarded-For are still counted, which
-  // is how CI exercises the real limit rather than a relaxed one. Gated on
-  // the emulator so production has no loopback hole to aim at.
+  // The emulator has no front end setting X-Forwarded-For, so local traffic
+  // and CI polling would otherwise limit themselves.
   if (
     process.env.FUNCTIONS_EMULATOR === "true" &&
     (address === "127.0.0.1" || address === "::1")
@@ -162,8 +91,6 @@ function rateLimit(address) {
 
   const now = Date.now();
 
-  // Whole-map rollover rather than per-key expiry: one allocation a minute,
-  // and it doubles as the eviction pass the map would otherwise need.
   if (now - windowStart >= WINDOW_MS) {
     windowStart = now;
     hits = new Map();

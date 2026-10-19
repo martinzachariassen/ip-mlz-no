@@ -1,6 +1,3 @@
-# The GitHub side: repository settings, the variables the workflows read,
-# deployment environments, and the rules that protect main.
-
 data "github_user" "owner" {
   username = var.github_owner
 }
@@ -42,8 +39,6 @@ resource "github_repository" "this" {
     }
   }
 
-  # A destroy archives the repository instead of deleting it, and
-  # prevent_destroy stops Terraform from planning even that.
   archive_on_destroy = true
 
   lifecycle {
@@ -51,14 +46,11 @@ resource "github_repository" "this" {
   }
 }
 
-# Dependabot alerts for vulnerable dependencies (security updates build on it).
 resource "github_repository_vulnerability_alerts" "this" {
   repository = github_repository.this.name
   enabled    = true
 }
 
-# Read by deploy.yml, preview.yml and gcp-auth-check.yml. Taken straight from
-# the GCP resources, so they can't drift from what wif.tf created.
 resource "github_actions_variable" "wif_provider" {
   repository    = github_repository.this.name
   variable_name = "GCP_WORKLOAD_IDENTITY_PROVIDER"
@@ -71,8 +63,6 @@ resource "github_actions_variable" "deploy_sa" {
   value         = google_service_account.deploy.email
 }
 
-# Environments group deployments in the GitHub UI and link to their URL.
-# `production` is used by deploy.yml, `preview` by preview.yml.
 resource "github_repository_environment" "this" {
   for_each = toset(["preview", "production"])
 
@@ -80,9 +70,6 @@ resource "github_repository_environment" "this" {
   environment = each.value
 }
 
-# The single source of truth for what it takes to land on main. Merging to
-# main deploys to production, so every check that can catch a broken deploy
-# is required here.
 resource "github_repository_ruleset" "main" {
   name        = "main-protection-solo"
   repository  = github_repository.this.name
@@ -96,7 +83,6 @@ resource "github_repository_ruleset" "main" {
     }
   }
 
-  # Repository admins (that's you) may bypass, e.g. to fix a broken main.
   bypass_actors {
     actor_id    = 5 # built-in "Admin" repository role
     actor_type  = "RepositoryRole"
@@ -121,14 +107,13 @@ resource "github_repository_ruleset" "main" {
     required_status_checks {
       strict_required_status_checks_policy = true
 
-      # integration_id pins each check to GitHub Actions, so no other app
-      # can satisfy it by posting a status with the same name.
+      # integration_id stops other apps satisfying a check by posting its name.
       dynamic "required_check" {
         for_each = toset([
-          "build",               # ci.yml: lint + verify.sh
-          "terraform",           # ci.yml: fmt + validate of this folder
-          "review dependencies", # dependency-review.yml
-          "deploy-preview",      # preview.yml: real GCP login + Hosting deploy
+          "build",
+          "terraform",
+          "review dependencies",
+          "deploy-preview",
         ])
         content {
           context        = required_check.value
