@@ -9,15 +9,12 @@ ip-server.bin
 *.tfstate
 *.tfstate.*
 *.tfplan
-*_override.tf
-crash.log
 
 .env
 .env.local
 .env.*.local
 
 *.log
-logs/
 
 .vscode/*
 !.vscode/extensions.json
@@ -27,8 +24,6 @@ logs/
 Thumbs.db
 
 .claude/
-
-.playwright-mcp/
 
 # A global "Icon?" ignore rule also matches this directory.
 !public/assets/icons/
