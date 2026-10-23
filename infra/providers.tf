@@ -2,7 +2,7 @@ provider "google" {
   project = var.project_id
   region  = var.region
 
-  # The budgets API refuses calls without a quota project.
+  # The billing APIs refuse calls without a quota project.
   user_project_override = true
   billing_project       = var.project_id
 }

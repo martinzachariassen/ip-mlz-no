@@ -16,16 +16,6 @@ variable "region" {
   default     = "europe-west1"
 }
 
-variable "billing_account" {
-  description = "Billing account the project is charged to. Set with TF_VAR_billing_account; deliberately not committed."
-  type        = string
-}
-
-variable "budget_nok" {
-  description = "Monthly budget in NOK. Set with TF_VAR_budget_nok. Alerts only: GCP never stops spending at it."
-  type        = number
-}
-
 variable "github_owner" {
   description = "GitHub user that owns the repository."
   type        = string

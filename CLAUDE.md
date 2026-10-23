@@ -31,7 +31,7 @@ merge. A merge to `main` deploys to prod.
 - `firebase.json`: rewrites, security headers, cache policy (JSONC).
 - `infra/`: Terraform for the GCP and GitHub setup (project, APIs, WIF,
   deploy service account and roles, the `ip-go-runtime` service account,
-  Hosting site and domain, budget, repo
+  Hosting site and domain, repo
   settings and ruleset). Run plan and apply by hand with tokens from the
   environment (`infra/README.md`). CI only runs `fmt` and `validate`.
 
