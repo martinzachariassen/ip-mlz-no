@@ -5,7 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # One grouped PR per week keeps the noise down
     groups:
       bun:
         patterns: ["*"]
@@ -29,3 +28,16 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    commit-message:
+      prefix: "chore"
+
+  # CI only validates these: run `terraform plan` locally before merging.
+  - package-ecosystem: "terraform"
+    directory: "/infra"
+    schedule:
+      interval: "weekly"
+    groups:
+      terraform:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"

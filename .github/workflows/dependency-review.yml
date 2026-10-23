@@ -1,8 +1,5 @@
 name: Dependency Review
 
-# Blocks a PR that pulls in a dependency with a known vulnerability (or an
-# incompatible licence) *before* it lands — Dependabot only reacts after a
-# bad version is already on main.
 on:
   pull_request:
 

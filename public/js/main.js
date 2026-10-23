@@ -6,27 +6,19 @@ const PLACEHOLDER_IP = {
   v6: "2001:db8:cebd:8e40:1c2b:9f3a:44de:1",
 };
 
-const params = new URLSearchParams(location.search);
-
-// The family is read off the address itself, not chosen — a single
-// connection only ever tells you the one it came in on.
-let DATA = { ip: "" };
-let family = "v4";
 const SHORTCUT_HINT = "press C to copy plain · R for CIDR";
 
-// Dev-only shortcuts for exercising the v6 layout and the failure state
-// without needing real dual-stack routing.
-async function fetchIP() {
-  if (params.has("fail")) throw new Error("forced failure");
-  if (params.has("v6")) return PLACEHOLDER_IP.v6;
-  if (params.has("v4")) return PLACEHOLDER_IP.v4;
+const FETCH_TIMEOUT_MS = 15_000;
 
-  const res = await fetch("/ip", { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`/ip responded ${res.status}`);
-  const { ip } = await res.json();
-  if (!ip) throw new Error("/ip returned no address");
-  return ip;
-}
+const TIMING = {
+  boot: {
+    v4: { duration: 900, charDuration: 380 },
+    v6: { duration: 1200, charDuration: 260 },
+  },
+};
+
+// Width measured at this size becomes the em multiplier behind --adv4/--adv6.
+const RULER_PX = 100;
 
 const ipBtn = document.getElementById("ip");
 const ipText = document.getElementById("ip-text");
@@ -34,10 +26,36 @@ const ipLabel = document.getElementById("ip-label");
 const metaEl = document.getElementById("meta");
 const metaText = document.getElementById("meta-text");
 const statusEl = document.getElementById("status");
+const heroEl = document.querySelector(".hero");
 
-const state = { failed: false, copyable: false, meta: "" };
+const EXIT_MS =
+  parseFloat(getComputedStyle(ipBtn).getPropertyValue("--ip-exit")) || 0;
+
+const state = {
+  ip: "",
+  family: "v4",
+  failed: false,
+  copyable: false,
+  meta: "",
+};
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const params = new URLSearchParams(location.search);
+
+async function fetchIP() {
+  if (params.has("fail")) throw new Error("forced failure");
+  if (params.has("v6")) return PLACEHOLDER_IP.v6;
+  if (params.has("v4")) return PLACEHOLDER_IP.v4;
+
+  const res = await fetch("/ip", {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`/ip responded ${res.status}`);
+  const ip = (await res.text()).trim();
+  if (!ip) throw new Error("/ip returned no address");
+  return ip;
+}
 
 function setCopyable(copyable) {
   state.copyable = copyable;
@@ -48,8 +66,6 @@ function setCopyable(copyable) {
 function dropPointerFocus(e) {
   if (e.detail > 0) e.currentTarget.blur();
 }
-
-ipBtn.addEventListener("click", dropPointerFocus);
 
 let announceTimer;
 function announce(message) {
@@ -106,29 +122,38 @@ async function copyValue(text, confirmText, announceText) {
 }
 
 function copyIP() {
-  return copyValue(DATA.ip, "copied to clipboard", "IP address copied");
+  return copyValue(state.ip, "copied to clipboard", "IP address copied");
 }
 
 function copyCIDR() {
-  const cidr = `${DATA.ip}/${family === "v6" ? 128 : 32}`;
+  const cidr = `${state.ip}/${state.family === "v6" ? 128 : 32}`;
   return copyValue(cidr, `copied ${cidr}`, "IP address copied as CIDR");
 }
 
+ipBtn.addEventListener("click", dropPointerFocus);
 ipBtn.addEventListener("click", copyIP);
 
-const TIMING = {
-  boot: {
-    v4: { duration: 900, charDuration: 380 },
-    v6: { duration: 1200, charDuration: 260 },
-  },
-};
+document.addEventListener("keydown", (e) => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
 
-const heroEl = document.querySelector(".hero");
+  const t = e.target;
+  if (
+    t instanceof HTMLElement &&
+    (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))
+  ) {
+    return;
+  }
 
-// An offscreen clone of .ip-display, rendered at a fixed 100px so its
-// measured width can be divided back down to an em multiplier — the one
-// number CSS can't work out for itself (see --adv4/--adv6 in ip-display.css).
-const RULER_PX = 100;
+  // `key` can be missing on synthetic keydowns (e.g. Chrome autofill).
+  const key = e.key?.toLowerCase();
+  if (key === "c") {
+    e.preventDefault();
+    copyIP();
+  } else if (key === "r") {
+    e.preventDefault();
+    copyCIDR();
+  }
+});
 
 const rulerBox = document.createElement("span");
 rulerBox.className = "ip-display";
@@ -143,13 +168,13 @@ ruler.style.cssText = "flex-wrap:nowrap;max-width:none;";
 rulerBox.appendChild(ruler);
 heroEl.appendChild(rulerBox);
 
-function advanceOf(family, cells) {
-  rulerBox.dataset.version = family;
+function advanceOf(version, cells) {
+  rulerBox.dataset.version = version;
   ruler.replaceChildren(...groupCells(cells));
   return ruler.getBoundingClientRect().width / RULER_PX;
 }
 
-const gridAdvance = (text, family) => advanceOf(family, buildCells(text));
+const gridAdvance = (text, version) => advanceOf(version, buildCells(text));
 
 function twoLineAdvance(ip) {
   const parts = ip.split(":");
@@ -169,7 +194,7 @@ function twoLineAdvance(ip) {
 function shownValue() {
   return state.failed
     ? { text: "0.0.0.0", size: "v4" }
-    : { text: DATA.ip, size: family };
+    : { text: state.ip, size: state.family };
 }
 
 function measureAdvances() {
@@ -191,7 +216,7 @@ function measureAdvances() {
 }
 
 function render() {
-  const { ip } = DATA;
+  const { ip, family } = state;
   setCopyable(true);
   ipBtn.dataset.version = family;
   ipLabel.textContent = `Copy IP address ${ip}`;
@@ -211,36 +236,12 @@ function renderFailure() {
   announce("Could not determine your IP address");
 }
 
-const EXIT_MS =
-  parseFloat(getComputedStyle(ipBtn).getPropertyValue("--ip-exit")) || 0;
-
-document.addEventListener("keydown", (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-  const t = e.target;
-  if (
-    t instanceof HTMLElement &&
-    (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))
-  ) {
-    return;
-  }
-
-  const key = e.key.toLowerCase();
-  if (key === "c") {
-    e.preventDefault();
-    copyIP();
-  } else if (key === "r") {
-    e.preventDefault();
-    copyCIDR();
-  }
-});
-
 function boot() {
   const fontsReady = document.fonts?.ready ?? Promise.resolve();
   fetchIP().then(
     (ip) => {
-      DATA = { ip };
-      family = ip.includes(":") ? "v6" : "v4";
+      state.ip = ip;
+      state.family = ip.includes(":") ? "v6" : "v4";
       measureAdvances();
       fontsReady.then(measureAdvances);
       render();

@@ -1,9 +1,6 @@
-/* ---- 404 page ---- */
+/* No min-height: repeating 100svh on top of body's padding adds a scrollbar. */
 .notfound {
   display: flex;
-  min-height: 100vh;
-  /* biome-ignore lint/suspicious/noDuplicateProperties: deliberate fallback, see body rule in base.css */
-  min-height: 100svh;
   flex-direction: column;
   align-items: center;
   justify-content: center;

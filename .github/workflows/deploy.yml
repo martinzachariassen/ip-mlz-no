@@ -1,31 +1,18 @@
 name: Deploy
 
-# Publishes public/ and the /ip Cloud Function to Firebase Hosting.
-#
-# Nothing ships that hasn't passed scripts/verify.sh first: the `verify` job
-# below boots the emulators and asserts the same production contract CI does
-# (headers, cache policy, /ip's formats, 405, the rate limit), and `deploy`
-# needs it. That gate covers workflow_dispatch too, which previously
-# deployed with no checks at all.
-#
-# Keyless auth: GitHub's OIDC token is exchanged via Workload Identity
-# Federation for short-lived credentials impersonating the deploy service
-# account, locked to this repo via an attribute condition. Nothing secret
-# lives here, so these are repo *variables*, not secrets:
-#   GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+env:
+  PROJECT: what-is-my-ip-f7210
+
 permissions:
   contents: read
-  # Required for GitHub to mint the OIDC token that WIF exchanges.
   id-token: write
 
-# Newest commit wins, but an in-flight run finishes rather than shipping
-# half-uploaded assets. Covers verify + deploy as one unit, so a superseded
-# commit can't be mid-verify while its successor deploys.
+# An in-flight run finishes rather than shipping half-uploaded assets.
 concurrency:
   group: deploy-${{ github.workflow }}
   cancel-in-progress: false
@@ -40,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up mise (installs Bun from mise.toml)
+      - name: Set up mise (installs Bun + Node from mise.toml)
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
@@ -69,7 +56,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up mise (installs Bun from mise.toml)
+      - name: Set up mise (installs Bun + Node from mise.toml)
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
@@ -79,16 +66,14 @@ jobs:
         working-directory: functions
         run: npm ci
 
-      # Impersonation gives a plain OAuth token; firebase-tools has a history
-      # of failing on raw external_account files. GOOGLE_APPLICATION_CREDENTIALS
-      # is set for the step below (create_credentials_file defaults to true).
+      # Impersonation yields a plain OAuth token; firebase-tools has failed on
+      # raw external_account credential files.
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          project_id: what-is-my-ip-f7210
+          project_id: ${{ env.PROJECT }}
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
-      # Uses the devDependency-pinned firebase-tools, same version CI tested — not a marketplace action's own resolution.
       - name: Deploy
-        run: bunx firebase-tools deploy --only hosting,functions --project what-is-my-ip-f7210 --non-interactive
+        run: bunx firebase-tools deploy --only hosting,functions --project "$PROJECT" --non-interactive

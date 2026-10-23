@@ -5,11 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# Read-only: every dependency comes from the public npm registry.
 permissions:
   contents: read
 
-# Newer pushes cancel in-flight runs.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -24,10 +22,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # Bun version comes from mise.toml — single source of truth. Bun is
-      # the package manager for the site tooling; functions/ is plain npm
-      # (Cloud Functions' buildpack only recognizes npm/yarn lockfiles).
-      - name: Set up mise (installs Bun from mise.toml)
+      # functions/ stays on npm: Cloud Functions' buildpack ignores bun.lock.
+      - name: Set up mise (installs Bun + Node from mise.toml)
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
@@ -40,7 +36,29 @@ jobs:
         working-directory: functions
         run: npm ci
 
-      # Same script the deploy workflow gates on, and the same one you can
-      # run locally — see scripts/verify.sh.
       - name: Check firebase.json headers, cache policy, and /ip
         run: ./scripts/verify.sh
+
+  terraform:
+    name: terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up mise (installs Terraform from mise.toml)
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+
+      - name: Format check
+        run: terraform fmt -check -recursive -diff
+
+      - name: Init (providers only, from the lock file)
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate
+        run: terraform validate
