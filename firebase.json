@@ -11,8 +11,8 @@
     "rewrites": [
       {
         "source": "/ip",
-        "function": {
-          "functionId": "ip",
+        "run": {
+          "serviceId": "ip-go",
           "region": "europe-west1"
         }
       }
@@ -76,25 +76,10 @@
       }
     ]
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ],
   // 5050, not the default 5000: macOS AirPlay Receiver holds it.
   "emulators": {
     "hosting": {
       "port": 5050
-    },
-    "functions": {
-      "port": 5001
     },
     "singleProjectMode": true
   }

@@ -2,6 +2,7 @@ node_modules/
 .storecode/
 
 dist/
+ip-server.bin
 
 .firebase/
 firebase-debug.log

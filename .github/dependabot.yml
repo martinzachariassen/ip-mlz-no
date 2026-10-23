@@ -11,12 +11,12 @@ updates:
     commit-message:
       prefix: "chore"
 
-  - package-ecosystem: "npm"
-    directory: "/functions"
+  - package-ecosystem: "gomod"
+    directory: "/server"
     schedule:
       interval: "weekly"
     groups:
-      functions:
+      server:
         patterns: ["*"]
     commit-message:
       prefix: "chore"

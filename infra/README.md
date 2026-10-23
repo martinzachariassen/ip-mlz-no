@@ -16,9 +16,9 @@ The rule: Terraform owns what describes the setup and changes rarely.
 
 | Not in Terraform | Where it lives instead |
 |---|---|
-| The `/ip` function's code and runtime settings | `functions/index.js`, deployed by `deploy.yml` |
+| The `/ip` service's code and runtime settings | `server/` and the `gcloud run deploy` flags in `deploy.yml` |
 | Hosting content, headers, cache rules, rewrites | `public/` and `firebase.json`, deployed by `deploy.yml` |
-| `gcf-artifacts` registry and `gcf-*` buckets | Created and managed by `firebase deploy` |
+| `cloud-run-source-deploy` registry and `run-sources-*` bucket | Created and managed by `gcloud run deploy --source` |
 | Google-managed service agents, default service accounts, the APIs GCP enables by default | Owned by Google; managing them adds noise and no control |
 | DNS records for `ip.mlz.no` | Managed outside Terraform. `terraform output dns_records` shows what Hosting expects |
 
