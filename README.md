@@ -62,7 +62,7 @@ echoes it back if it parses as an IP address. An IPv4-mapped IPv6 address is
 reported as the IPv4 it carries. Because every `/ip` request reaches the
 service, it is the one part of the site with a per-request cost. That cost is
 bounded by `--max-instances 1`, a 10 second timeout and a budget alert
-([`infra/budget.tf`](infra/budget.tf)). There is no rate limiter. The service
+set in the GCP console. There is no rate limiter. The service
 runs as its own service account with no roles
 ([`infra/run.tf`](infra/run.tf)), not as the project's default account.
 
@@ -116,7 +116,7 @@ the preview because GitHub gives them no OIDC token.
 
 The Google Cloud and GitHub setup is Terraform in [`infra/`](infra/): the
 project and its APIs, Hosting and the custom domain, the deploy login and its
-roles, the service's runtime account, the budget, and the repository settings
+roles, the service's runtime account, and the repository settings
 and branch ruleset. The service and the site content are not in Terraform.
 They ship from `deploy.yml`, with Cloud Build and `firebase deploy`. `plan`
 and `apply` are run by hand, so the deploy account never needs rights to

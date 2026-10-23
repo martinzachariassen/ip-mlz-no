@@ -1,7 +1,6 @@
 resource "google_project" "this" {
-  project_id      = var.project_id
-  name            = var.project_name
-  billing_account = var.billing_account
+  project_id = var.project_id
+  name       = var.project_name
 
   # No `labels`: Firebase sets its own and Terraform must not claim them.
 
@@ -9,6 +8,10 @@ resource "google_project" "this" {
 
   lifecycle {
     prevent_destroy = true
+
+    # The billing link is made in the console, so the account ID stays out of
+    # this public repo. Without this, apply would unlink billing.
+    ignore_changes = [billing_account]
   }
 }
 
@@ -42,4 +45,14 @@ resource "google_project_service" "this" {
   service = each.value
 
   disable_on_destroy = false
+}
+
+# The budget now lives in the console. This stops apply from deleting it;
+# remove the block after the first apply.
+removed {
+  from = google_billing_budget.this
+
+  lifecycle {
+    destroy = false
+  }
 }
