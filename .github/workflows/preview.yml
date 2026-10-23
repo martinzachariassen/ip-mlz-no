@@ -50,7 +50,10 @@ jobs:
           CHANNEL: pr-${{ github.event.pull_request.number }}
         run: |
           out="$(bunx firebase-tools hosting:channel:deploy "$CHANNEL" \
-            --expires 7d --project "$PROJECT" --non-interactive --json)"
+            --expires 7d --project "$PROJECT" --non-interactive --json)" || {
+            echo "$out"
+            exit 1
+          }
           url="$(jq -r '.result[].url' <<< "$out" | head -n 1)"
           if [ -z "$url" ] || [ "$url" = "null" ]; then
             echo "$out"
