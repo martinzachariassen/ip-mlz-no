@@ -46,13 +46,3 @@ resource "google_project_service" "this" {
 
   disable_on_destroy = false
 }
-
-# The budget now lives in the console. This stops apply from deleting it;
-# remove the block after the first apply.
-removed {
-  from = google_billing_budget.this
-
-  lifecycle {
-    destroy = false
-  }
-}
