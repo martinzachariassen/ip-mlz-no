@@ -1,13 +1,9 @@
 node_modules/
 .storecode/
 
-dist/
 ip-server.bin
 
 .firebase/
-firebase-debug.log
-firestore-debug.log
-ui-debug.log
 
 .terraform/
 *.tfstate
@@ -21,7 +17,6 @@ crash.log
 .env.*.local
 
 *.log
-npm-debug.log*
 logs/
 
 .vscode/*

@@ -4,12 +4,12 @@ data "github_user" "owner" {
 
 resource "github_repository" "this" {
   name         = var.github_repo
-  description  = "\"What is my IP\" — a static site with a Cloud Function backend, served from Firebase Hosting. Live at ip.mlz.no."
+  description  = "\"What is my IP\" — a static site on Firebase Hosting with a small Go service on Cloud Run. Live at ip.mlz.no."
   homepage_url = "https://${var.domain}"
   visibility   = "public"
   topics = [
-    "biome", "bun", "firebase", "firebase-functions", "firebase-hosting",
-    "google-cloud-functions", "ip-address", "javascript", "serverless",
+    "biome", "bun", "cloud-run", "firebase", "firebase-hosting", "go",
+    "google-cloud-run", "ip-address", "javascript", "serverless",
     "static-site", "whatismyip",
   ]
 
@@ -23,7 +23,7 @@ resource "github_repository" "this" {
   allow_rebase_merge     = true
   allow_auto_merge       = false
   allow_update_branch    = false
-  delete_branch_on_merge = false
+  delete_branch_on_merge = true
 
   squash_merge_commit_title   = "COMMIT_OR_PR_TITLE"
   squash_merge_commit_message = "COMMIT_MESSAGES"

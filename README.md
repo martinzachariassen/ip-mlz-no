@@ -62,7 +62,9 @@ echoes it back if it parses as an IP address. An IPv4-mapped IPv6 address is
 reported as the IPv4 it carries. Because every `/ip` request reaches the
 service, it is the one part of the site with a per-request cost. That cost is
 bounded by `--max-instances 1`, a 10 second timeout and a budget alert
-([`infra/budget.tf`](infra/budget.tf)). There is no rate limiter.
+([`infra/budget.tf`](infra/budget.tf)). There is no rate limiter. The service
+runs as its own service account with no roles
+([`infra/run.tf`](infra/run.tf)), not as the project's default account.
 
 The raw Cloud Run URL is also reachable and its `X-Forwarded-For` is
 caller-controlled. A request that spoofs it only changes what that caller is
@@ -81,8 +83,8 @@ bun install
 bun run dev           # Hosting emulator: http://127.0.0.1:5050
 bun run dev:server    # Go /ip service: http://127.0.0.1:8080/ip
 bun run test:server   # go vet and go test
-bun run lint          # biome ci .
-bun run format        # biome check --write .
+bun run lint          # biome ci . and a gofmt check
+bun run format        # biome check --write . and gofmt -w
 ./scripts/verify.sh   # tests the service, boots the emulator, asserts the contract
 ```
 
@@ -93,9 +95,8 @@ or the error state without calling `/ip`.
 [`scripts/verify.sh`](scripts/verify.sh) checks the security headers, cache
 rules, the custom 404 page and the `/ip` contract. The Hosting emulator can't
 run Cloud Run, so `/ip` is checked against the Go service directly. It is the
-quality gate: CI
-and the deploy job run the same file. A pre-commit hook, installed by
-`bun install`, runs `bun run lint`.
+quality gate: CI and the deploy job run the same file. A pre-commit hook,
+installed by `bun install`, runs `bun run lint`, which also checks `gofmt`.
 
 ## CI/CD
 
@@ -115,10 +116,11 @@ the preview because GitHub gives them no OIDC token.
 
 The Google Cloud and GitHub setup is Terraform in [`infra/`](infra/): the
 project and its APIs, Hosting and the custom domain, the deploy login and its
-roles, the budget, and the repository settings and branch ruleset. The
-service and the site content are not in Terraform. They ship from
-`deploy.yml`, with Cloud Build and `firebase deploy`. `plan` and `apply` are run by hand, so the deploy account
-never needs rights to change IAM. See [`infra/README.md`](infra/README.md).
+roles, the service's runtime account, the budget, and the repository settings
+and branch ruleset. The service and the site content are not in Terraform.
+They ship from `deploy.yml`, with Cloud Build and `firebase deploy`. `plan`
+and `apply` are run by hand, so the deploy account never needs rights to
+change IAM. See [`infra/README.md`](infra/README.md).
 
 ## Contributing
 

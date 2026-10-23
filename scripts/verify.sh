@@ -12,7 +12,7 @@ ipbase="http://127.0.0.1:$IP_PORT"
 log="emulator.log"
 iplog="ip-server.log"
 
-(cd server && go vet ./... && go test ./...)
+bun run test:server
 (cd server && go build -o ../ip-server.bin .)
 
 PORT="$IP_PORT" ./ip-server.bin > "$iplog" 2>&1 &

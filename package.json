@@ -16,8 +16,8 @@
     "dev": "firebase emulators:start --only hosting",
     "dev:server": "cd server && go run .",
     "test:server": "cd server && go vet ./... && go test ./...",
-    "format": "biome check --write .",
-    "lint": "biome ci ."
+    "format": "biome check --write . && gofmt -w server",
+    "lint": "biome ci . && test -z \"$(gofmt -l server)\""
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

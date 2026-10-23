@@ -3,7 +3,8 @@
 Everything about how ip.mlz.no is *set up* in Google Cloud and GitHub,
 written down as Terraform: the project, its APIs, Firebase Hosting and the
 custom domain, the keyless deploy login (Workload Identity Federation), the
-deploy service account and its roles, the budget, and the repository's
+deploy service account and its roles, the role-less account the `/ip`
+service runs as, the budget, and the repository's
 settings, variables, environments and branch rules.
 
 If it's in this folder, change it here and not in a console. A click in the
@@ -31,7 +32,7 @@ Each file covers one topic. A good reading order:
 3. `project.tf`: the project, Firebase, APIs.
 4. `wif.tf`: how GitHub Actions logs in to GCP without a key. This is the part
    that broke when the repo was renamed.
-5. `hosting.tf`, `budget.tf`, `github.tf`, `state.tf`.
+5. `run.tf`, `hosting.tf`, `budget.tf`, `github.tf`, `state.tf`.
 
 Things worth knowing when reading:
 

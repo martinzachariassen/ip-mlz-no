@@ -10,8 +10,8 @@ bun install        # setup (Bun, Node 22 and Go via mise)
 bun run dev        # Hosting emulator: http://127.0.0.1:5050 (not 5000: macOS AirPlay)
 bun run dev:server # Go /ip service: http://127.0.0.1:8080/ip
 bun run test:server  # go vet + go test
-bun run lint       # biome ci . (also the pre-commit hook)
-bun run format     # biome check --write .
+bun run lint       # biome ci . + gofmt check (also the pre-commit hook)
+bun run format     # biome check --write . + gofmt -w
 ./scripts/verify.sh  # tests server/, boots emulator, asserts headers/cache/`/ip`
 ```
 
@@ -30,7 +30,8 @@ merge. A merge to `main` deploys to prod.
   Cloud Run service `ip-go` by `deploy.yml`. Hosting rewrites `/ip` to it.
 - `firebase.json`: rewrites, security headers, cache policy (JSONC).
 - `infra/`: Terraform for the GCP and GitHub setup (project, APIs, WIF,
-  deploy service account and roles, Hosting site and domain, budget, repo
+  deploy service account and roles, the `ip-go-runtime` service account,
+  Hosting site and domain, budget, repo
   settings and ruleset). Run plan and apply by hand with tokens from the
   environment (`infra/README.md`). CI only runs `fmt` and `validate`.
 
@@ -38,6 +39,8 @@ merge. A merge to `main` deploys to prod.
 
 - `--max-instances 1` (in `deploy.yml`) is the cost ceiling; there is no rate
   limiter behind it.
+- `ip-go` runs as `ip-go-runtime` (`infra/run.tf`), which has no roles. Don't
+  grant it any, and don't drop `--service-account` from `deploy.yml`.
 - The service must validate the forwarded address (`clientAddr()`) before
   echoing it. On the raw Cloud Run URL, X-Forwarded-For is caller-controlled.
 - `/ip` returns the bare address as plain text and stays `no-store`.
