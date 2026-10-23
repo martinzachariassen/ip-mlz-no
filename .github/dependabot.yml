@@ -31,7 +31,6 @@ updates:
     commit-message:
       prefix: "chore"
 
-  # CI only validates these: run `terraform plan` locally before merging.
   - package-ecosystem: "terraform"
     directory: "/infra"
     schedule:

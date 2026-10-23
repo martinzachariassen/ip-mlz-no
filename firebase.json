@@ -17,7 +17,6 @@
         }
       }
     ],
-    // Last match wins: catch-all first, overrides after.
     "headers": [
       {
         "source": "**",
