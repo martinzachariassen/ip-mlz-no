@@ -2,17 +2,26 @@
 set -euo pipefail
 
 PORT="${PORT:-5050}"
+IP_PORT="${IP_PORT:-8081}"
 PROJECT="${PROJECT:-what-is-my-ip-f7210}"
 
 cd "$(dirname "$0")/.."
 
 base="http://127.0.0.1:$PORT"
+ipbase="http://127.0.0.1:$IP_PORT"
 log="emulator.log"
+iplog="ip-server.log"
 
-bunx firebase-tools emulators:start --only hosting,functions \
+bun run test:server
+(cd server && go build -o ../ip-server.bin .)
+
+PORT="$IP_PORT" ./ip-server.bin > "$iplog" 2>&1 &
+ipserver=$!
+
+bunx firebase-tools emulators:start --only hosting \
   --project "$PROJECT" > "$log" 2>&1 &
 server=$!
-trap 'kill "$server" 2>/dev/null || true' EXIT
+trap 'kill "$server" "$ipserver" 2>/dev/null || true; rm -f ip-server.bin' EXIT
 
 up=0
 for _ in $(seq 1 120); do
@@ -26,12 +35,10 @@ if [ "$up" != "1" ]; then
   exit 1
 fi
 
-# Hosting is up before the Functions emulator registers /ip, which 404s with
-# "does not exist" until then. `! ... | grep -q`, not `grep -qv`: -qv succeeds
-# when any line fails to match, so a multi-line error page would pass as ready.
-for _ in $(seq 1 60); do
-  curl -s "$base/ip" | grep -q "does not exist" || break
-  sleep 1
+# The Hosting emulator can't run Cloud Run, so /ip is checked on the Go server.
+for _ in $(seq 1 20); do
+  curl -sf -o /dev/null "$ipbase/ip" && break
+  sleep 0.5
 done
 
 fail=0
@@ -77,41 +84,41 @@ else
   ok "favicon is served and not immutable"
 fi
 
-plain="$(curl -s "$base/ip")"
+plain="$(curl -s "$ipbase/ip")"
 if echo "$plain" | grep -qE '^[0-9a-fA-F:.]+$'; then
   ok "/ip returns a bare address as plain text"
 else
   bad "/ip did not return a bare address (got: $plain)"
 fi
 
-if headers "$base/ip" | grep -qi '^cache-control:.*no-store'; then
+if headers "$ipbase/ip" | grep -qi '^cache-control:.*no-store'; then
   ok "/ip is not cached"
 else
   bad "/ip is missing no-store"
 fi
 
-if headers "$base/ip" | grep -qi '^x-robots-tag:.*noindex'; then
+if headers "$ipbase/ip" | grep -qi '^x-robots-tag:.*noindex'; then
   ok "/ip is noindex"
 else
   bad "/ip is missing X-Robots-Tag: noindex"
 fi
 
 status="$(curl -s -o /dev/null -w '%{http_code}' \
-  -H 'X-Forwarded-For: not-an-address' "$base/ip")"
+  -H 'X-Forwarded-For: not-an-address' "$ipbase/ip")"
 if [ "$status" = "502" ]; then
   ok "/ip refuses a forwarded value that isn't an address"
 else
   bad "/ip accepted a forwarded value that isn't an address (status $status)"
 fi
 
-mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' "$base/ip")"
+mapped="$(curl -s -H 'X-Forwarded-For: ::ffff:198.51.100.7' "$ipbase/ip")"
 if [ "$mapped" = "198.51.100.7" ]; then
   ok "/ip unwraps IPv4-mapped IPv6"
 else
   bad "/ip did not unwrap IPv4-mapped IPv6 (got: $mapped)"
 fi
 
-status="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$base/ip")"
+status="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$ipbase/ip")"
 if [ "$status" = "405" ]; then
   ok "/ip rejects POST"
 else
@@ -121,5 +128,7 @@ fi
 if [ "$fail" -ne 0 ]; then
   echo "--- emulator log ---"
   cat "$log"
+  echo "--- ip server log ---"
+  cat "$iplog"
 fi
 exit "$fail"

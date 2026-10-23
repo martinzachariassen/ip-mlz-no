@@ -2,7 +2,7 @@
   "name": "ip-mlz-no",
   "version": "1.0.0",
   "private": true,
-  "description": "\"What is my IP\" — a static site with a small Cloud Function backend, served from Firebase Hosting.",
+  "description": "\"What is my IP\" — a static site with a small Go Cloud Run backend, served from Firebase Hosting.",
   "homepage": "https://ip.mlz.no",
   "author": "Martin Zachariassen <hi@mlz.no>",
   "license": "MIT",
@@ -13,9 +13,11 @@
   "type": "module",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
-    "dev": "firebase emulators:start --only hosting,functions",
-    "format": "biome check --write .",
-    "lint": "biome ci ."
+    "dev": "firebase emulators:start --only hosting",
+    "dev:server": "cd server && go run .",
+    "test:server": "cd server && go vet ./... && go test ./...",
+    "format": "biome check --write . && gofmt -w server",
+    "lint": "biome ci . && test -z \"$(gofmt -l server)\""
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

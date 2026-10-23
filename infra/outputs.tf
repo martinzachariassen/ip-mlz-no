@@ -8,6 +8,11 @@ output "deploy_service_account" {
   value       = google_service_account.deploy.email
 }
 
+output "ip_runtime_service_account" {
+  description = "Service account ip-go runs as (--service-account in deploy.yml)."
+  value       = google_service_account.ip_runtime.email
+}
+
 output "dns_records" {
   description = "DNS records Firebase Hosting expects for the custom domain (set at the DNS provider)."
   value       = google_firebase_hosting_custom_domain.ip.required_dns_updates

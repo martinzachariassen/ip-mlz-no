@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up mise (installs Bun + Node from mise.toml)
+      - name: Set up tools from mise.toml
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
@@ -36,15 +36,11 @@ jobs:
       - name: Lint & format check
         run: bun run lint
 
-      - name: Install function dependencies
-        working-directory: functions
-        run: npm ci
-
       - name: Check firebase.json headers, cache policy, and /ip
         run: ./scripts/verify.sh
 
   deploy:
-    name: deploy to Firebase Hosting + Functions
+    name: deploy to Cloud Run + Firebase Hosting
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -56,15 +52,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up mise (installs Bun + Node from mise.toml)
+      - name: Set up tools from mise.toml
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Install function dependencies
-        working-directory: functions
-        run: npm ci
 
       # Impersonation yields a plain OAuth token; firebase-tools has failed on
       # raw external_account credential files.
@@ -75,5 +67,25 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
-      - name: Deploy
-        run: bunx firebase-tools deploy --only hosting,functions --project "$PROJECT" --non-interactive
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Deploy Cloud Run service
+        run: >
+          gcloud run deploy ip-go
+          --source server
+          --project "$PROJECT"
+          --region europe-west1
+          --service-account "ip-go-runtime@$PROJECT.iam.gserviceaccount.com"
+          --min-instances 0
+          --max-instances 1
+          --concurrency 250
+          --timeout 10
+          --cpu 1
+          --memory 256Mi
+          --ingress all
+          --allow-unauthenticated
+          --quiet
+
+      - name: Deploy Hosting
+        run: bunx firebase-tools deploy --only hosting --project "$PROJECT" --non-interactive

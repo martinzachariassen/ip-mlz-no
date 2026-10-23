@@ -22,7 +22,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up mise (installs Bun + Node from mise.toml)
+      - name: Set up tools from mise.toml
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
 
       - name: Install dependencies
@@ -38,5 +38,8 @@ jobs:
       - name: Check Hosting access
         run: bunx firebase-tools hosting:channel:list --project "$PROJECT" --non-interactive
 
-      - name: Check Functions access
-        run: bunx firebase-tools functions:list --project "$PROJECT" --non-interactive
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Check Cloud Run access
+        run: gcloud run services list --project "$PROJECT" --region europe-west1

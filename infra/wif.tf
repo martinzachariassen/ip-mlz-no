@@ -34,11 +34,11 @@ locals {
   deploy_roles = toset([
     "roles/artifactregistry.writer",
     "roles/cloudbuild.builds.editor",
-    "roles/cloudfunctions.admin",
     "roles/firebasehosting.admin",
     "roles/iam.serviceAccountUser",
     "roles/run.admin",
     "roles/serviceusage.serviceUsageConsumer",
+    "roles/storage.admin",
   ])
 }
 

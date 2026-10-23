@@ -1,4 +1,5 @@
 [tools]
 bun = "1.4.0"
 node = "22"
+go = "1.25"
 terraform = "1.16.3"

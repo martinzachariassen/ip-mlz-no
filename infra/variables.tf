@@ -11,7 +11,7 @@ variable "project_name" {
 }
 
 variable "region" {
-  description = "Region for regional resources. Matches functions/index.js."
+  description = "Region for regional resources. Matches the Cloud Run deploy in deploy.yml and the rewrite in firebase.json."
   type        = string
   default     = "europe-west1"
 }
