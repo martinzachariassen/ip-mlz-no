@@ -8,7 +8,10 @@ const PLACEHOLDER_IP = {
 
 const SHORTCUT_HINT = "press C to copy plain · R for CIDR";
 
+const DEFAULT_TITLE = document.title;
+
 const FETCH_TIMEOUT_MS = 15_000;
+const REFRESH_MIN_MS = 10_000;
 
 const TIMING = {
   boot: {
@@ -52,6 +55,7 @@ const state = {
 };
 
 const params = new URLSearchParams(location.search);
+const live = !["v4", "v6", "fail"].some((p) => params.has(p));
 
 async function fetchIP() {
   if (params.has("fail")) throw new Error("forced failure");
@@ -331,7 +335,7 @@ function show(timing) {
   return scramble(ipText, text, { ...timing, pool });
 }
 
-function render(ip) {
+function render(ip, { changed = false } = {}) {
   state.ip = ip;
   state.family = ip.includes(":") ? "v6" : "v4";
   state.failed = false;
@@ -340,9 +344,16 @@ function render(ip) {
   ipBtn.classList.remove("is-failed");
   setCopyable(true);
   ipLabel.textContent = `Copy IP address ${ip}`;
+  document.title = `${ip} · ip.mlz.no`;
   show(TIMING.boot[state.family]);
 
-  setMeta(metaFor());
+  if (changed) {
+    state.meta = metaFor();
+    flashMeta("address changed");
+    announce(`Your IP address changed to ${ip}`);
+  } else {
+    setMeta(metaFor());
+  }
 }
 
 function renderFailure() {
@@ -351,14 +362,34 @@ function renderFailure() {
   ipBtn.classList.add("is-failed");
   ipBtn.dataset.version = "v4";
   ipLabel.textContent = "IP address unavailable";
+  document.title = DEFAULT_TITLE;
   measureAdvances();
   setMeta("no route · can't see you from here");
   scramble(ipText, "0.0.0.0", { perpetual: true });
   announce("Could not determine your IP address");
 }
 
+let lastCheck = 0;
+let checking = false;
+
+async function refresh() {
+  if (!live || checking || document.hidden) return;
+  if (performance.now() - lastCheck < REFRESH_MIN_MS) return;
+  checking = true;
+  lastCheck = performance.now();
+  try {
+    const ip = await fetchIP();
+    if (state.failed || ip !== state.ip) render(ip, { changed: true });
+  } catch {
+    // A failed recheck keeps the last address; the next one may succeed.
+  } finally {
+    checking = false;
+  }
+}
+
 function boot() {
   const fontsReady = document.fonts?.ready ?? Promise.resolve();
+  lastCheck = performance.now();
   fetchIP().then(
     (ip) => {
       render(ip);
@@ -369,6 +400,10 @@ function boot() {
       fontsReady.then(measureAdvances);
     },
   );
+
+  document.addEventListener("visibilitychange", refresh);
+  addEventListener("online", refresh);
+  navigator.connection?.addEventListener?.("change", refresh);
 }
 
 boot();
