@@ -1,0 +1,117 @@
+<!doctype html>
+<!-- Source for public/assets/social/og.png (1200×630). Not deployed — it
+     lives outside public/. Uses the site's tokens and fonts (light theme),
+     so regenerate it when those change. See README → "Social card". -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light" />
+    <title>ip.mlz.no social card</title>
+    <link rel="stylesheet" href="/public/css/fonts.css" />
+    <link rel="stylesheet" href="/public/css/tokens.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-mono);
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding: 64px 80px 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .brand svg {
+        width: 40px;
+        height: 40px;
+      }
+
+      .brand-word {
+        font-weight: 400;
+        font-size: 30px;
+        letter-spacing: 0.02em;
+      }
+
+      .accent {
+        color: var(--accent-deep);
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "Rajdhani", var(--font-mono);
+        font-weight: 700;
+        font-size: 168px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        margin-left: -6px;
+      }
+
+      .hint {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.08em;
+        color: var(--fg-muted);
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        padding: 26px 0 30px;
+        border-top: 1px solid var(--border);
+        font-size: 20px;
+        letter-spacing: 0.08em;
+        color: var(--fg-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <header class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="6" fill="currentColor" />
+          <polygon
+            points="7,25 7,7 11.5,7 16,18.5 20.5,7 25,7 25,25"
+            fill="var(--bg)"
+          />
+        </svg>
+        <span class="brand-word">what is my ip</span>
+      </header>
+
+      <main>
+        <h1>203<span class="accent">.</span>0<span class="accent">.</span>113<span class="accent">.</span>42</h1>
+        <p class="hint">press C to copy plain · R for CIDR</p>
+      </main>
+
+      <footer>
+        <span>ip.mlz.no</span>
+        <span>curl ip.mlz.no/ip</span>
+      </footer>
+    </div>
+  </body>
+</html>
