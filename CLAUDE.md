@@ -47,7 +47,11 @@ merge. A merge to `main` deploys to prod.
 - `firebase.json` `headers` is **last-match-wins**: catch-all first,
   specific overrides after.
 - CSP is `'self'` only: no inline scripts or styles, no third-party assets.
-  Fonts are self-hosted in `public/assets/fonts/`.
+  Fonts are self-hosted in `public/assets/fonts/`. The JSON-LD block in
+  `index.html` is data, not script, so CSP doesn't apply to it.
+- Colours, radius and easing in `public/css/tokens.css` are vendored from the
+  mlz brand (https://mlz.no/brand/BRAND.md). Change them there first; don't
+  invent new ones. Icons in `public/assets/icons/` are the brand mark.
 - Every URL in `404.html` must be root-relative, because it is served at
   arbitrary paths.
 - The firebase project ID (`what-is-my-ip-f7210`) is intentional and can't
@@ -66,9 +70,42 @@ No comments in code, config or other files unless strictly necessary
 (a non-obvious *why* that the code can't express). Don't add explanatory,
 narrating or section-divider comments.
 
+## Social card
+
+`public/assets/social/og.png` is rendered from `tools/og/og.html` (not
+deployed). Regenerate it when tokens, fonts or the hint text change; the
+command is in README → "Social card".
+
 ## Frontend preview
 
 `?v4`, `?v6`, `?fail` on the page URL render a documentation address or the
 error state without calling `/ip`. Use them to check layout changes.
 Headless Chrome won't go below ~500px wide, so check the narrow (≤480px)
 IPv6 wrap with real device emulation.
+
+## Commits
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+`type: short description`, e.g. `fix: ...`, `feat: ...`, `chore: ...`,
+`docs: ...`, `release: ...`. See `git log` for examples.
+
+## Pull requests
+
+Always use `.github/pull_request_template.md` when opening a PR; don't write
+a free-form description. Tick what applies and mark the rest N/A.
+
+## Releases
+
+Versions follow [SemVer](https://semver.org/); `CHANGELOG.md` ([Keep a
+Changelog](https://keepachangelog.com/en/1.1.0/), in English) and `version`
+in `package.json` are the source.
+
+1. Branch `release/vX.Y.Z`. Write the new `CHANGELOG.md` section by hand from
+   `git log <last tag>..HEAD` (group as Added/Changed/Fixed/Removed, fold
+   Dependabot bumps into one "Dependencies" line, reference PR numbers),
+   bump `package.json`, add the compare link at the bottom.
+2. Commit as `release: vX.Y.Z` and open a PR from the template.
+3. After it is merged and the Deploy run on `main` is green, tag the merge
+   commit (`git tag -a vX.Y.Z`), push the tag, and run
+   `gh release create vX.Y.Z --verify-tag` with the new changelog section as
+   notes. Merging and tagging are outward-facing: only when Martin asks.

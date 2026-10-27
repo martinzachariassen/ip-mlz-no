@@ -1,5 +1,5 @@
 import { copyText } from "./clipboard.js";
-import { buildCells, groupCells, scramble } from "./scramble.js";
+import { BITS, buildCells, groupCells, HEX, scramble } from "./scramble.js";
 
 const PLACEHOLDER_IP = {
   v4: "203.0.113.42",
@@ -8,13 +8,22 @@ const PLACEHOLDER_IP = {
 
 const SHORTCUT_HINT = "press C to copy plain · R for CIDR";
 
+const DEFAULT_TITLE = document.title;
+
 const FETCH_TIMEOUT_MS = 15_000;
+const REFRESH_MIN_MS = 10_000;
 
 const TIMING = {
   boot: {
     v4: { duration: 900, charDuration: 380 },
     v6: { duration: 1200, charDuration: 260 },
   },
+  format: { duration: 650, charDuration: 220 },
+};
+
+const FORMATS = {
+  hex: { key: "h", name: "hex", pool: HEX },
+  bin: { key: "b", name: "binary", pool: BITS },
 };
 
 // Width measured at this size becomes the em multiplier behind --adv4/--adv6.
@@ -26,22 +35,26 @@ const ipLabel = document.getElementById("ip-label");
 const metaEl = document.getElementById("meta");
 const metaText = document.getElementById("meta-text");
 const statusEl = document.getElementById("status");
+const curlBtn = document.getElementById("curl");
 const heroEl = document.querySelector(".hero");
 
-const EXIT_MS =
-  parseFloat(getComputedStyle(ipBtn).getPropertyValue("--ip-exit")) || 0;
+const rootStyle = getComputedStyle(document.documentElement);
+const EXIT_MS = parseFloat(rootStyle.getPropertyValue("--ip-exit")) || 0;
+const EASE = rootStyle.getPropertyValue("--ease").trim() || "ease-out";
+const ENTER_MS = 220;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 
 const state = {
   ip: "",
   family: "v4",
+  format: "plain",
   failed: false,
   copyable: false,
   meta: "",
 };
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const params = new URLSearchParams(location.search);
+const live = !["v4", "v6", "fail"].some((p) => params.has(p));
 
 async function fetchIP() {
   if (params.has("fail")) throw new Error("forced failure");
@@ -55,6 +68,36 @@ async function fetchIP() {
   const ip = (await res.text()).trim();
   if (!ip) throw new Error("/ip returned no address");
   return ip;
+}
+
+function expandV6(ip) {
+  let s = ip.toLowerCase();
+  const v4 = s.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number);
+    s = `${s.slice(0, -v4[0].length)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = s.includes("::") ? s.split("::") : [s, null];
+  const h = head ? head.split(":") : [];
+  const t = tail ? tail.split(":") : [];
+  const fill = tail === null ? [] : Array(8 - h.length - t.length).fill("0");
+  return [...h, ...fill, ...t].map((g) => g.padStart(4, "0")).join(":");
+}
+
+function formatIP(ip, family, format) {
+  if (format === "plain") return ip;
+  if (family === "v6") return expandV6(ip);
+  const [radix, width] = format === "hex" ? [16, 2] : [2, 8];
+  return ip
+    .split(".")
+    .map((o) => Number(o).toString(radix).padStart(width, "0"))
+    .join(".");
+}
+
+function metaFor() {
+  if (state.format === "plain") return SHORTCUT_HINT;
+  const f = FORMATS[state.format];
+  return `${f.name} · ${f.key.toUpperCase()} to go back`;
 }
 
 function setCopyable(copyable) {
@@ -78,32 +121,62 @@ function announce(message) {
 
 let metaToken = 0;
 let metaRevertTimer;
+let metaAnim;
 
 function setMeta(text) {
   clearTimeout(metaRevertTimer);
   metaToken++;
+  metaAnim?.cancel();
   delete metaEl.dataset.copied;
   state.meta = text;
   metaText.textContent = text;
 }
 
-async function fadeMetaTo(text) {
+function swapMeta(text, copied) {
   const token = ++metaToken;
-  metaEl.classList.add("is-swapping");
-  await wait(EXIT_MS);
-  if (token !== metaToken) return;
-  metaText.textContent = text;
-  metaEl.classList.remove("is-swapping");
+  const shift = reduced.matches ? 0 : 3;
+  const now = getComputedStyle(metaText);
+  const from = { opacity: now.opacity, translate: now.translate };
+  metaAnim?.cancel();
+  metaAnim = metaText.animate(
+    [from, { opacity: 0, translate: `0 ${-shift}px` }],
+    {
+      duration: EXIT_MS,
+      easing: "cubic-bezier(0.4, 0, 1, 1)",
+      fill: "forwards",
+    },
+  );
+  metaAnim.finished.then(
+    () => {
+      if (token !== metaToken) return;
+      metaText.textContent = text;
+      if (copied) metaEl.dataset.copied = "";
+      else delete metaEl.dataset.copied;
+      metaAnim.cancel();
+      // Touch devices hide the hint in CSS; end where CSS will leave it.
+      const target = getComputedStyle(metaText).opacity;
+      metaAnim = metaText.animate(
+        [
+          { opacity: 0, translate: `0 ${shift}px` },
+          { opacity: target, translate: "0 0" },
+        ],
+        { duration: ENTER_MS, easing: EASE },
+      );
+    },
+    () => {},
+  );
 }
 
 function flashMeta(text) {
   clearTimeout(metaRevertTimer);
-  metaEl.dataset.copied = "";
-  fadeMetaTo(text);
-  metaRevertTimer = setTimeout(() => {
-    delete metaEl.dataset.copied;
-    fadeMetaTo(state.meta);
-  }, 1500);
+  swapMeta(text, true);
+  metaRevertTimer = setTimeout(() => swapMeta(state.meta, false), 1500);
+}
+
+function changeMeta(text) {
+  clearTimeout(metaRevertTimer);
+  state.meta = text;
+  swapMeta(text, false);
 }
 
 let copyTimer;
@@ -130,8 +203,40 @@ function copyCIDR() {
   return copyValue(cidr, `copied ${cidr}`, "IP address copied as CIDR");
 }
 
+let curlTimer;
+async function copyCurl() {
+  const cmd = curlBtn.dataset.copy;
+  curlBtn.dataset.copied = "";
+  clearTimeout(curlTimer);
+  curlTimer = setTimeout(() => {
+    delete curlBtn.dataset.copied;
+  }, 1500);
+
+  const ok = await copyText(cmd);
+  flashMeta(ok ? `copied ${cmd}` : "copy failed");
+  announce(ok ? "Command copied" : "Copy failed");
+}
+
+function setFormat(format) {
+  if (state.failed || !state.ip || format === state.format) return;
+  if (format === "bin" && state.family === "v6") {
+    flashMeta("128 bits won't fit");
+    return;
+  }
+  state.format = format;
+  show(TIMING.format);
+  changeMeta(metaFor());
+  announce(
+    format === "plain"
+      ? `Showing ${state.ip}`
+      : `Showing the address in ${FORMATS[format].name}`,
+  );
+}
+
 ipBtn.addEventListener("click", dropPointerFocus);
 ipBtn.addEventListener("click", copyIP);
+curlBtn.addEventListener("click", dropPointerFocus);
+curlBtn.addEventListener("click", copyCurl);
 
 document.addEventListener("keydown", (e) => {
   if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -152,6 +257,13 @@ document.addEventListener("keydown", (e) => {
   } else if (key === "r") {
     e.preventDefault();
     copyCIDR();
+  } else if (key === "escape") {
+    setFormat("plain");
+  } else {
+    const format = Object.keys(FORMATS).find((f) => FORMATS[f].key === key);
+    if (!format) return;
+    e.preventDefault();
+    setFormat(state.format === format ? "plain" : format);
   }
 });
 
@@ -176,11 +288,9 @@ function advanceOf(version, cells) {
 
 const gridAdvance = (text, version) => advanceOf(version, buildCells(text));
 
-function twoLineAdvance(ip) {
-  const parts = ip.split(":");
-  const widths = parts.map((g, i) =>
-    gridAdvance(i < parts.length - 1 ? `${g}:` : g, "v6"),
-  );
+function twoLineAdvance(text) {
+  const parts = text.match(/[^.:]*[.:]|[^.:]+$/g);
+  const widths = parts.map((part) => gridAdvance(part, "v6"));
   const total = widths.reduce((a, b) => a + b, 0);
   let best = total;
   let head = 0;
@@ -191,10 +301,12 @@ function twoLineAdvance(ip) {
   return best;
 }
 
+// Long forms (v6, binary v4) share the v6 size cap and narrow-screen wrap.
 function shownValue() {
-  return state.failed
-    ? { text: "0.0.0.0", size: "v4" }
-    : { text: state.ip, size: state.family };
+  if (state.failed) return { text: "0.0.0.0", size: "v4" };
+  const text = formatIP(state.ip, state.family, state.format);
+  const size = state.family === "v6" || state.format === "bin" ? "v6" : "v4";
+  return { text, size, pool: FORMATS[state.format]?.pool };
 }
 
 function measureAdvances() {
@@ -215,42 +327,82 @@ function measureAdvances() {
   }
 }
 
-function render() {
-  const { ip, family } = state;
+function show(timing) {
+  const { text, size, pool } = shownValue();
+  ipBtn.dataset.version = size;
+  measureAdvances();
+  return scramble(ipText, text, { ...timing, pool });
+}
+
+function render(ip, { changed = false } = {}) {
+  state.ip = ip;
+  state.family = ip.includes(":") ? "v6" : "v4";
+  state.failed = false;
+  if (state.family === "v6" && state.format === "bin") state.format = "plain";
+
+  ipBtn.classList.remove("is-failed");
   setCopyable(true);
-  ipBtn.dataset.version = family;
   ipLabel.textContent = `Copy IP address ${ip}`;
-  setMeta(SHORTCUT_HINT);
-  scramble(ipText, ip, TIMING.boot[family]);
+  document.title = `${ip} · ip.mlz.no`;
+  show(TIMING.boot[state.family]);
+
+  if (changed) {
+    state.meta = metaFor();
+    flashMeta("address changed");
+    announce(`Your IP address changed to ${ip}`);
+  } else {
+    setMeta(metaFor());
+  }
 }
 
 function renderFailure() {
   state.failed = true;
-  measureAdvances();
   setCopyable(false);
   ipBtn.classList.add("is-failed");
   ipBtn.dataset.version = "v4";
   ipLabel.textContent = "IP address unavailable";
+  document.title = DEFAULT_TITLE;
+  measureAdvances();
   setMeta("no route · can't see you from here");
   scramble(ipText, "0.0.0.0", { perpetual: true });
   announce("Could not determine your IP address");
 }
 
+let lastCheck = 0;
+let checking = false;
+
+async function refresh() {
+  if (!live || checking || document.hidden) return;
+  if (performance.now() - lastCheck < REFRESH_MIN_MS) return;
+  checking = true;
+  lastCheck = performance.now();
+  try {
+    const ip = await fetchIP();
+    if (state.failed || ip !== state.ip) render(ip, { changed: true });
+  } catch {
+    // A failed recheck keeps the last address; the next one may succeed.
+  } finally {
+    checking = false;
+  }
+}
+
 function boot() {
   const fontsReady = document.fonts?.ready ?? Promise.resolve();
+  lastCheck = performance.now();
   fetchIP().then(
     (ip) => {
-      state.ip = ip;
-      state.family = ip.includes(":") ? "v6" : "v4";
-      measureAdvances();
+      render(ip);
       fontsReady.then(measureAdvances);
-      render();
     },
     () => {
       renderFailure();
       fontsReady.then(measureAdvances);
     },
   );
+
+  document.addEventListener("visibilitychange", refresh);
+  addEventListener("online", refresh);
+  navigator.connection?.addEventListener?.("change", refresh);
 }
 
 boot();

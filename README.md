@@ -1,32 +1,53 @@
-# ip.mlz.no
+<p align="center">
+  <a href="https://ip.mlz.no">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.png" />
+      <img src=".github/assets/banner-light.png" alt="The site showing the documentation address 203.0.113.42 in large type, the hint &quot;press C to copy plain · R for CIDR&quot; beneath it, and a footer reading &quot;mlz.no · $ curl ip.mlz.no/ip&quot;" width="100%" />
+    </picture>
+  </a>
+</p>
 
-[![CI](https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml/badge.svg)](https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/github/license/martinzachariassen/ip-mlz-no)](LICENSE)
+<p align="center">
+  <a href="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml"><img src="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/martinzachariassen/ip-mlz-no" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <a href="https://ip.mlz.no"><b>Live site</b></a>
+  &nbsp;·&nbsp;
+  <a href="#usage"><b>Usage</b></a>
+  &nbsp;·&nbsp;
+  <a href="#development"><b>Development</b></a>
+  &nbsp;·&nbsp;
+  <a href="#cicd"><b>Deploys</b></a>
+  &nbsp;·&nbsp;
+  <a href="CHANGELOG.md"><b>Changelog</b></a>
+</p>
 
 A minimal "what is my IP" site, live at [ip.mlz.no](https://ip.mlz.no). It
 shows your public IPv4 or IPv6 address in large type, copies it on click, and
 serves it as plain text at `/ip`.
 
 It is a static frontend on Firebase Hosting plus one small Go service on Cloud
-Run, with no frontend build step.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
-    <img src="docs/screenshot-light.png" alt="The site showing an IP address in large monospace type, with the hint &quot;press C to copy plain · R for CIDR&quot; beneath it" width="720" />
-  </picture>
-</p>
-
-<p align="center">
-  <sub>The address shown is <a href="https://www.rfc-editor.org/rfc/rfc5737">RFC 5737</a> documentation space, not a real one.</sub>
-</p>
+Run, with no frontend build step. The address in the banner is
+[RFC 5737](https://www.rfc-editor.org/rfc/rfc5737) documentation space, not a
+real one.
 
 ## Features
 
 - Click or tap to copy. **C** copies the address, **R** copies it as a CIDR
-  (`/32` or `/128`).
+  (`/32` or `/128`). The `$ curl ip.mlz.no/ip` in the footer copies the
+  command.
+- **H** shows the address in hex (IPv6 fully expanded), **B** in binary
+  (IPv4 only). Press the key again or **Esc** to go back.
+- The address updates by itself when it changes, for example when you turn
+  on a VPN: the page checks again when the tab regains focus or the network
+  changes, never on a timer. The tab title shows the address.
 - IPv4 and IPv6, with type sized to fit the address on any screen.
-- Light and dark themes that follow the system setting.
+- Light and dark themes that follow the system setting, with colours and icons
+  from the [mlz brand](https://mlz.no/brand/BRAND.md).
+- A social card for link previews, JSON-LD and an
+  [`llms.txt`](public/llms.txt).
 - Strict security headers: a `'self'`-only CSP, self-hosted fonts and no
   third-party requests.
 
@@ -37,6 +58,9 @@ Open the page, or call the endpoint directly:
 ```sh
 curl https://ip.mlz.no/ip
 # 203.0.113.9
+
+curl -4 https://ip.mlz.no/ip   # force IPv4
+curl -6 https://ip.mlz.no/ip   # force IPv6, if your network has it
 ```
 
 The response is the bare address as plain text. It is never cached
@@ -97,6 +121,48 @@ rules, the custom 404 page and the `/ip` contract. The Hosting emulator can't
 run Cloud Run, so `/ip` is checked against the Go service directly. It is the
 quality gate: CI and the deploy job run the same file. A pre-commit hook,
 installed by `bun install`, runs `bun run lint`, which also checks `gofmt`.
+
+<details>
+<summary><strong>Social card</strong></summary>
+
+`public/assets/social/og.png` (the 1200×630 Open Graph image) is rendered from
+[`tools/og/og.html`](tools/og/og.html) using the site's tokens and fonts (light
+theme). Regenerate it whenever those or the hint text change:
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1 &   # serve the repo root
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+  --hide-scrollbars --window-size=1200,630 --force-device-scale-factor=1 \
+  --virtual-time-budget=4000 --screenshot=public/assets/social/og.png \
+  http://127.0.0.1:8765/tools/og/og.html
+kill %1
+```
+
+</details>
+
+<details>
+<summary><strong>README banner</strong></summary>
+
+The banner at the top of this file is a screenshot of the page with the
+`?v4` documentation address in each theme, kept in `.github/assets/` so it is
+not deployed. Retake it after a visible change to the page:
+
+```sh
+python3 -m http.server 8766 --bind 127.0.0.1 --directory public &
+for theme in light:1 dark:0; do
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+    --hide-scrollbars --window-size=1280,720 --force-device-scale-factor=2 \
+    --force-prefers-reduced-motion \
+    --blink-settings=preferredColorScheme=${theme#*:} \
+    --virtual-time-budget=4000 \
+    --screenshot=.github/assets/banner-${theme%:*}.png "http://127.0.0.1:8766/?v4"
+done
+kill %1
+```
+
+`--force-prefers-reduced-motion` skips the scramble animation.
+
+</details>
 
 ## CI/CD
 

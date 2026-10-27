@@ -1,0 +1,59 @@
+name: Bug report
+description: Something on ip.mlz.no or the /ip endpoint isn't working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search [existing issues](../../issues) first to avoid duplicates.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Leave out your real IP address; it isn't needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - The web page
+        - The /ip endpoint
+    validations:
+      required: true
+
+  - type: dropdown
+    id: family
+    attributes:
+      label: Address family
+      options:
+        - IPv4
+        - IPv6
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: Browser, device or client
+      placeholder: "Safari 26 on iPhone, curl 8.x, …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, response headers, network setup (VPN, proxy, CGNAT) or anything else that might be relevant.

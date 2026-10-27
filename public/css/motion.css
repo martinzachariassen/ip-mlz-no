@@ -1,13 +1,97 @@
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* backwards, not both: a forwards fill would pin translate and block :active. */
+.hero > .ip-display,
+.hero > .meta,
+.sig,
+.notfound > * {
+  animation: rise 0.9s var(--ease) backwards;
+}
+.hero > .meta,
+.notfound > :nth-child(2) {
+  animation-delay: 90ms;
+}
+.sig {
+  animation-delay: 180ms;
+}
+
+/* The repeated name adds a third animation on hover, so the glitch replays. */
+.notfound-code {
+  animation:
+    rise 0.9s var(--ease) backwards,
+    glitch 280ms steps(1, end) 700ms;
+}
+@media (hover: hover) and (pointer: fine) {
+  .notfound-code:hover {
+    animation:
+      rise 0.9s var(--ease) backwards,
+      glitch 0.4s steps(1, end) 700ms,
+      glitch 0.4s steps(1, end);
+  }
+}
+
+/* Ambient per-letter glitch, as on mlz.no: js/glitch.js picks the letters. */
+.glitch {
+  display: inline-block;
+}
+
+.glitch.is-glitching {
+  animation: glitch 0.4s steps(1, end);
+}
+
+@keyframes glitch {
+  0%,
+  100% {
+    transform: translate(0);
+    text-shadow: none;
+  }
+  18% {
+    transform: translate(-2px, -1px);
+    text-shadow:
+      2px 0 var(--accent),
+      -2px 0 var(--glitch-2);
+  }
+  34% {
+    transform: translate(2px, 1px);
+    text-shadow:
+      -2px 0 var(--glitch-2),
+      2px 0 var(--accent);
+  }
+  50% {
+    transform: translate(-1px, 0);
+    opacity: 0.75;
+  }
+  66% {
+    transform: translate(2px, -1px);
+    text-shadow:
+      -2px 0 var(--accent),
+      2px 0 var(--glitch-2);
+  }
+  82% {
+    transform: translate(-1px, 1px);
+    text-shadow:
+      1px 0 var(--accent),
+      -1px 0 var(--glitch-2);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hero {
+    transition-duration: 120ms;
+  }
   .ip-display {
     transition-duration: 0.01ms;
   }
   .ip-display[data-copyable]:active {
-    transform: none;
+    translate: none;
   }
   .ip-text::after {
     scale: 1 1;
-    transition: opacity 120ms var(--ease);
   }
   .copy-hint {
     translate: none;
@@ -21,10 +105,18 @@
     transition-duration: 60ms;
     transition-delay: 0s;
   }
-  .meta-text {
-    transition-duration: var(--ip-exit);
+  .sig a::after,
+  button.sig-cmd::after,
+  .sig-prompt > * {
+    translate: none;
+    transition-duration: 0.01ms;
   }
-  .meta.is-swapping .meta-text {
-    transform: none;
+  .hero > .ip-display,
+  .hero > .meta,
+  .sig,
+  .notfound > *,
+  .notfound-code:hover,
+  .glitch.is-glitching {
+    animation: none;
   }
 }
