@@ -1,5 +1,5 @@
 import { copyText } from "./clipboard.js";
-import { buildCells, groupCells, scramble } from "./scramble.js";
+import { BITS, buildCells, groupCells, HEX, scramble } from "./scramble.js";
 
 const PLACEHOLDER_IP = {
   v4: "203.0.113.42",
@@ -15,6 +15,12 @@ const TIMING = {
     v4: { duration: 900, charDuration: 380 },
     v6: { duration: 1200, charDuration: 260 },
   },
+  format: { duration: 650, charDuration: 220 },
+};
+
+const FORMATS = {
+  hex: { key: "h", name: "hex", pool: HEX },
+  bin: { key: "b", name: "binary", pool: BITS },
 };
 
 // Width measured at this size becomes the em multiplier behind --adv4/--adv6.
@@ -39,6 +45,7 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 const state = {
   ip: "",
   family: "v4",
+  format: "plain",
   failed: false,
   copyable: false,
   meta: "",
@@ -58,6 +65,36 @@ async function fetchIP() {
   const ip = (await res.text()).trim();
   if (!ip) throw new Error("/ip returned no address");
   return ip;
+}
+
+function expandV6(ip) {
+  let s = ip.toLowerCase();
+  const v4 = s.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number);
+    s = `${s.slice(0, -v4[0].length)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = s.includes("::") ? s.split("::") : [s, null];
+  const h = head ? head.split(":") : [];
+  const t = tail ? tail.split(":") : [];
+  const fill = tail === null ? [] : Array(8 - h.length - t.length).fill("0");
+  return [...h, ...fill, ...t].map((g) => g.padStart(4, "0")).join(":");
+}
+
+function formatIP(ip, family, format) {
+  if (format === "plain") return ip;
+  if (family === "v6") return expandV6(ip);
+  const [radix, width] = format === "hex" ? [16, 2] : [2, 8];
+  return ip
+    .split(".")
+    .map((o) => Number(o).toString(radix).padStart(width, "0"))
+    .join(".");
+}
+
+function metaFor() {
+  if (state.format === "plain") return SHORTCUT_HINT;
+  const f = FORMATS[state.format];
+  return `${f.name} · ${f.key.toUpperCase()} to go back`;
 }
 
 function setCopyable(copyable) {
@@ -133,6 +170,12 @@ function flashMeta(text) {
   metaRevertTimer = setTimeout(() => swapMeta(state.meta, false), 1500);
 }
 
+function changeMeta(text) {
+  clearTimeout(metaRevertTimer);
+  state.meta = text;
+  swapMeta(text, false);
+}
+
 let copyTimer;
 async function copyValue(text, confirmText, announceText) {
   if (!state.copyable) return;
@@ -171,6 +214,22 @@ async function copyCurl() {
   announce(ok ? "Command copied" : "Copy failed");
 }
 
+function setFormat(format) {
+  if (state.failed || !state.ip || format === state.format) return;
+  if (format === "bin" && state.family === "v6") {
+    flashMeta("128 bits won't fit");
+    return;
+  }
+  state.format = format;
+  show(TIMING.format);
+  changeMeta(metaFor());
+  announce(
+    format === "plain"
+      ? `Showing ${state.ip}`
+      : `Showing the address in ${FORMATS[format].name}`,
+  );
+}
+
 ipBtn.addEventListener("click", dropPointerFocus);
 ipBtn.addEventListener("click", copyIP);
 curlBtn.addEventListener("click", dropPointerFocus);
@@ -195,6 +254,13 @@ document.addEventListener("keydown", (e) => {
   } else if (key === "r") {
     e.preventDefault();
     copyCIDR();
+  } else if (key === "escape") {
+    setFormat("plain");
+  } else {
+    const format = Object.keys(FORMATS).find((f) => FORMATS[f].key === key);
+    if (!format) return;
+    e.preventDefault();
+    setFormat(state.format === format ? "plain" : format);
   }
 });
 
@@ -219,11 +285,9 @@ function advanceOf(version, cells) {
 
 const gridAdvance = (text, version) => advanceOf(version, buildCells(text));
 
-function twoLineAdvance(ip) {
-  const parts = ip.split(":");
-  const widths = parts.map((g, i) =>
-    gridAdvance(i < parts.length - 1 ? `${g}:` : g, "v6"),
-  );
+function twoLineAdvance(text) {
+  const parts = text.match(/[^.:]*[.:]|[^.:]+$/g);
+  const widths = parts.map((part) => gridAdvance(part, "v6"));
   const total = widths.reduce((a, b) => a + b, 0);
   let best = total;
   let head = 0;
@@ -234,10 +298,12 @@ function twoLineAdvance(ip) {
   return best;
 }
 
+// Long forms (v6, binary v4) share the v6 size cap and narrow-screen wrap.
 function shownValue() {
-  return state.failed
-    ? { text: "0.0.0.0", size: "v4" }
-    : { text: state.ip, size: state.family };
+  if (state.failed) return { text: "0.0.0.0", size: "v4" };
+  const text = formatIP(state.ip, state.family, state.format);
+  const size = state.family === "v6" || state.format === "bin" ? "v6" : "v4";
+  return { text, size, pool: FORMATS[state.format]?.pool };
 }
 
 function measureAdvances() {
@@ -258,22 +324,34 @@ function measureAdvances() {
   }
 }
 
-function render() {
-  const { ip, family } = state;
+function show(timing) {
+  const { text, size, pool } = shownValue();
+  ipBtn.dataset.version = size;
+  measureAdvances();
+  return scramble(ipText, text, { ...timing, pool });
+}
+
+function render(ip) {
+  state.ip = ip;
+  state.family = ip.includes(":") ? "v6" : "v4";
+  state.failed = false;
+  if (state.family === "v6" && state.format === "bin") state.format = "plain";
+
+  ipBtn.classList.remove("is-failed");
   setCopyable(true);
-  ipBtn.dataset.version = family;
   ipLabel.textContent = `Copy IP address ${ip}`;
-  setMeta(SHORTCUT_HINT);
-  scramble(ipText, ip, TIMING.boot[family]);
+  show(TIMING.boot[state.family]);
+
+  setMeta(metaFor());
 }
 
 function renderFailure() {
   state.failed = true;
-  measureAdvances();
   setCopyable(false);
   ipBtn.classList.add("is-failed");
   ipBtn.dataset.version = "v4";
   ipLabel.textContent = "IP address unavailable";
+  measureAdvances();
   setMeta("no route · can't see you from here");
   scramble(ipText, "0.0.0.0", { perpetual: true });
   announce("Could not determine your IP address");
@@ -283,11 +361,8 @@ function boot() {
   const fontsReady = document.fonts?.ready ?? Promise.resolve();
   fetchIP().then(
     (ip) => {
-      state.ip = ip;
-      state.family = ip.includes(":") ? "v6" : "v4";
-      measureAdvances();
+      render(ip);
       fontsReady.then(measureAdvances);
-      render();
     },
     () => {
       renderFailure();
