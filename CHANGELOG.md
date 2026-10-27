@@ -8,9 +8,12 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- A quiet footer linking back to [mlz.no](https://mlz.no) and to the
-  plain-text endpoint (`curl ip.mlz.no/ip`), on the home and 404 pages. It
+- A quiet footer with a link back to [mlz.no](https://mlz.no) and the
+  command `$ curl ip.mlz.no/ip`, on the home and 404 pages. On the home page,
+  clicking the command copies it and the hint line confirms. The footer
   hides on very short viewports so it never crowds the address.
+- README and `llms.txt` show `curl -4` and `curl -6` to force an address
+  family.
 - An Open Graph card (`public/assets/social/og.png`, 1200×630) rendered from
   `tools/og/og.html`, with `summary_large_image` for link previews.
 - JSON-LD (`WebApplication`) and `llms.txt` describing the page and `/ip`.

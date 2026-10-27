@@ -27,6 +27,30 @@
   font: inherit;
 }
 
+.sig-cmd {
+  background: none;
+  border: 0;
+  padding: 0;
+  letter-spacing: inherit;
+  border-radius: var(--radius);
+  transition: color 180ms var(--ease);
+}
+
+button.sig-cmd {
+  cursor: pointer;
+}
+
+button.sig-cmd:hover,
+.sig-cmd[data-copied] {
+  color: var(--accent-deep);
+}
+
+.sig-prompt {
+  margin-right: 0.6em;
+  opacity: 0.6;
+  user-select: none;
+}
+
 .sig-sep {
   margin: 0 0.6em;
 }

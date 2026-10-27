@@ -2,7 +2,7 @@
   <a href="https://ip.mlz.no">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.png" />
-      <img src=".github/assets/banner-light.png" alt="The site showing the documentation address 203.0.113.42 in large type, the hint &quot;press C to copy plain · R for CIDR&quot; beneath it, and a footer reading &quot;mlz.no · curl ip.mlz.no/ip&quot;" width="100%" />
+      <img src=".github/assets/banner-light.png" alt="The site showing the documentation address 203.0.113.42 in large type, the hint &quot;press C to copy plain · R for CIDR&quot; beneath it, and a footer reading &quot;mlz.no · $ curl ip.mlz.no/ip&quot;" width="100%" />
     </picture>
   </a>
 </p>
@@ -36,7 +36,8 @@ real one.
 ## Features
 
 - Click or tap to copy. **C** copies the address, **R** copies it as a CIDR
-  (`/32` or `/128`).
+  (`/32` or `/128`). The `$ curl ip.mlz.no/ip` in the footer copies the
+  command.
 - IPv4 and IPv6, with type sized to fit the address on any screen.
 - Light and dark themes that follow the system setting, with colours and icons
   from the [mlz brand](https://mlz.no/brand/BRAND.md).
@@ -52,6 +53,9 @@ Open the page, or call the endpoint directly:
 ```sh
 curl https://ip.mlz.no/ip
 # 203.0.113.9
+
+curl -4 https://ip.mlz.no/ip   # force IPv4
+curl -6 https://ip.mlz.no/ip   # force IPv6, if your network has it
 ```
 
 The response is the bare address as plain text. It is never cached

@@ -26,6 +26,8 @@ const ipLabel = document.getElementById("ip-label");
 const metaEl = document.getElementById("meta");
 const metaText = document.getElementById("meta-text");
 const statusEl = document.getElementById("status");
+const curlBtn = document.getElementById("curl");
+const curlCmd = document.getElementById("curl-cmd");
 const heroEl = document.querySelector(".hero");
 
 const EXIT_MS =
@@ -130,8 +132,24 @@ function copyCIDR() {
   return copyValue(cidr, `copied ${cidr}`, "IP address copied as CIDR");
 }
 
+let curlTimer;
+async function copyCurl() {
+  const cmd = curlCmd.textContent;
+  curlBtn.dataset.copied = "";
+  clearTimeout(curlTimer);
+  curlTimer = setTimeout(() => {
+    delete curlBtn.dataset.copied;
+  }, 1500);
+
+  const ok = await copyText(cmd);
+  flashMeta(ok ? `copied ${cmd}` : "copy failed");
+  announce(ok ? "Command copied" : "Copy failed");
+}
+
 ipBtn.addEventListener("click", dropPointerFocus);
 ipBtn.addEventListener("click", copyIP);
+curlBtn.addEventListener("click", dropPointerFocus);
+curlBtn.addEventListener("click", copyCurl);
 
 document.addEventListener("keydown", (e) => {
   if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
