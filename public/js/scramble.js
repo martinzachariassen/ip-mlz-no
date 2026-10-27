@@ -1,5 +1,6 @@
-const DIGITS = "0123456789";
-const HEX = "0123456789abcdef";
+export const DIGITS = "0123456789";
+export const HEX = "0123456789abcdef";
+export const BITS = "01";
 const SEPARATOR = /[.:]/;
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -49,6 +50,8 @@ export function scramble(el, target, opts = {}) {
   const cells = buildCells(target);
   el.replaceChildren(...groupCells(cells));
 
+  delete el.dataset.scrambling;
+
   if (reduced.matches) {
     if (perpetual) {
       cells.forEach((c) => {
@@ -75,6 +78,8 @@ export function scramble(el, target, opts = {}) {
   const glyph = new Array(n).fill("");
   let lastChurn = -Infinity;
   let t0 = 0;
+
+  el.dataset.scrambling = "";
 
   return new Promise((resolve) => {
     const step = (now) => {
@@ -116,6 +121,13 @@ export function scramble(el, target, opts = {}) {
           c.textContent = chars[i];
           c.classList.remove("is-scrambling");
         });
+        // A frame later, so the last cells to lock still start without delay.
+        frames.set(
+          el,
+          requestAnimationFrame(() => {
+            delete el.dataset.scrambling;
+          }),
+        );
         resolve();
       }
     };

@@ -1,3 +1,9 @@
+@property --affordance {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 /* cqw, not vw: vw counts the scrollbar gutter and would overflow by it. */
 .panel {
   position: relative;
@@ -34,6 +40,8 @@
   --lines6: 1;
 
   --ip-slot: var(--fs4);
+
+  transition: --affordance 320ms var(--ease);
 }
 
 .hero[data-v6="address"] {
@@ -61,11 +69,12 @@
   border-radius: var(--radius);
   line-height: 1;
   white-space: nowrap;
-  transition: transform 160ms var(--ease);
+  transition: translate 160ms var(--ease);
 }
 
 .ip-display[data-copyable]:active {
-  transform: scale(0.985);
+  translate: 0 1px;
+  transition-duration: 60ms;
 }
 
 .ip-text {
@@ -84,11 +93,18 @@
   display: inline-block;
   width: 1ch;
   text-align: center;
-  transition: color 140ms var(--ease);
-  transition-delay: calc(var(--i) * 8ms);
+  transition:
+    color 180ms var(--ease),
+    opacity 180ms var(--ease);
+  transition-delay: calc(var(--i) * 12ms);
 }
+/* No color transition: --affordance already animates it on hover. */
 .cell.sep {
   width: auto;
+  transition: opacity 180ms var(--ease);
+}
+
+.ip-text[data-scrambling] .cell {
   transition-delay: 0s;
 }
 
@@ -114,7 +130,7 @@
   color: color-mix(
     in oklch,
     var(--fg),
-    var(--accent-deep) calc(var(--affordance, 0) * 100%)
+    var(--accent-deep) calc(var(--affordance) * 100%)
   );
 }
 
@@ -132,11 +148,8 @@
     var(--accent-deep) 90%,
     transparent
   );
-  opacity: var(--affordance, 0);
-  scale: calc(0.35 + 0.65 * var(--affordance, 0)) 1;
-  transition:
-    opacity 200ms var(--ease),
-    scale 420ms var(--ease-expo);
+  opacity: var(--affordance);
+  scale: calc(0.35 + 0.65 * var(--affordance)) 1;
 }
 
 .ip-display[data-copied] .cell {

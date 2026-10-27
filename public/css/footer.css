@@ -12,15 +12,27 @@
   color: var(--fg-muted);
 }
 
-.sig a {
+.sig a,
+.sig-cmd {
+  position: relative;
   color: inherit;
   text-decoration: none;
   border-radius: var(--radius);
-  transition: color 180ms var(--ease);
+  transition: color 220ms var(--ease);
 }
 
-.sig a:hover {
-  color: var(--accent-deep);
+.sig a::after,
+button.sig-cmd::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: currentColor;
+  scale: 0 1;
+  transform-origin: right;
+  transition: scale 380ms var(--ease);
 }
 
 .sig code {
@@ -32,23 +44,74 @@
   border: 0;
   padding: 0;
   letter-spacing: inherit;
-  border-radius: var(--radius);
-  transition: color 180ms var(--ease);
 }
 
 button.sig-cmd {
   cursor: pointer;
 }
 
-button.sig-cmd:hover,
 .sig-cmd[data-copied] {
   color: var(--accent-deep);
 }
 
 .sig-prompt {
+  display: inline-grid;
   margin-right: 0.6em;
-  opacity: 0.6;
   user-select: none;
+}
+
+.sig-prompt > * {
+  grid-area: 1 / 1;
+  place-self: center;
+  transition:
+    opacity 220ms var(--ease),
+    translate 320ms var(--ease);
+}
+
+.sig-dollar {
+  opacity: 0.6;
+}
+
+.sig-check {
+  width: 0.32em;
+  height: 0.62em;
+  margin-top: -0.15em;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  rotate: 45deg;
+  opacity: 0;
+  translate: 0 3px;
+}
+
+.sig-cmd[data-copied] .sig-dollar {
+  opacity: 0;
+  translate: 0 -3px;
+}
+
+.sig-cmd[data-copied] .sig-check {
+  opacity: 1;
+  translate: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sig a:hover,
+  button.sig-cmd:hover {
+    color: var(--accent-deep);
+  }
+
+  .sig a:hover::after,
+  button.sig-cmd:hover::after {
+    scale: 1 1;
+    transform-origin: left;
+  }
+
+  button.sig-cmd:hover .sig-dollar {
+    opacity: 1;
+  }
+
+  button.sig-cmd[data-copied]:hover .sig-dollar {
+    opacity: 0;
+  }
 }
 
 .sig-sep {

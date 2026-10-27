@@ -30,8 +30,11 @@ const curlBtn = document.getElementById("curl");
 const curlCmd = document.getElementById("curl-cmd");
 const heroEl = document.querySelector(".hero");
 
-const EXIT_MS =
-  parseFloat(getComputedStyle(ipBtn).getPropertyValue("--ip-exit")) || 0;
+const rootStyle = getComputedStyle(document.documentElement);
+const EXIT_MS = parseFloat(rootStyle.getPropertyValue("--ip-exit")) || 0;
+const EASE = rootStyle.getPropertyValue("--ease").trim() || "ease-out";
+const ENTER_MS = 220;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 
 const state = {
   ip: "",
@@ -40,8 +43,6 @@ const state = {
   copyable: false,
   meta: "",
 };
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const params = new URLSearchParams(location.search);
 
@@ -80,32 +81,56 @@ function announce(message) {
 
 let metaToken = 0;
 let metaRevertTimer;
+let metaAnim;
 
 function setMeta(text) {
   clearTimeout(metaRevertTimer);
   metaToken++;
+  metaAnim?.cancel();
   delete metaEl.dataset.copied;
   state.meta = text;
   metaText.textContent = text;
 }
 
-async function fadeMetaTo(text) {
+function swapMeta(text, copied) {
   const token = ++metaToken;
-  metaEl.classList.add("is-swapping");
-  await wait(EXIT_MS);
-  if (token !== metaToken) return;
-  metaText.textContent = text;
-  metaEl.classList.remove("is-swapping");
+  const shift = reduced.matches ? 0 : 3;
+  const now = getComputedStyle(metaText);
+  const from = { opacity: now.opacity, translate: now.translate };
+  metaAnim?.cancel();
+  metaAnim = metaText.animate(
+    [from, { opacity: 0, translate: `0 ${-shift}px` }],
+    {
+      duration: EXIT_MS,
+      easing: "cubic-bezier(0.4, 0, 1, 1)",
+      fill: "forwards",
+    },
+  );
+  metaAnim.finished.then(
+    () => {
+      if (token !== metaToken) return;
+      metaText.textContent = text;
+      if (copied) metaEl.dataset.copied = "";
+      else delete metaEl.dataset.copied;
+      metaAnim.cancel();
+      // Touch devices hide the hint in CSS; end where CSS will leave it.
+      const target = getComputedStyle(metaText).opacity;
+      metaAnim = metaText.animate(
+        [
+          { opacity: 0, translate: `0 ${shift}px` },
+          { opacity: target, translate: "0 0" },
+        ],
+        { duration: ENTER_MS, easing: EASE },
+      );
+    },
+    () => {},
+  );
 }
 
 function flashMeta(text) {
   clearTimeout(metaRevertTimer);
-  metaEl.dataset.copied = "";
-  fadeMetaTo(text);
-  metaRevertTimer = setTimeout(() => {
-    delete metaEl.dataset.copied;
-    fadeMetaTo(state.meta);
-  }, 1500);
+  swapMeta(text, true);
+  metaRevertTimer = setTimeout(() => swapMeta(state.meta, false), 1500);
 }
 
 let copyTimer;

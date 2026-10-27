@@ -1,13 +1,15 @@
 @media (prefers-reduced-motion: reduce) {
+  .hero {
+    transition-duration: 120ms;
+  }
   .ip-display {
     transition-duration: 0.01ms;
   }
   .ip-display[data-copyable]:active {
-    transform: none;
+    translate: none;
   }
   .ip-text::after {
     scale: 1 1;
-    transition: opacity 120ms var(--ease);
   }
   .copy-hint {
     translate: none;
@@ -21,10 +23,10 @@
     transition-duration: 60ms;
     transition-delay: 0s;
   }
-  .meta-text {
-    transition-duration: var(--ip-exit);
-  }
-  .meta.is-swapping .meta-text {
-    transform: none;
+  .sig a::after,
+  button.sig-cmd::after,
+  .sig-prompt > * {
+    translate: none;
+    transition-duration: 0.01ms;
   }
 }
