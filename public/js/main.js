@@ -36,7 +36,6 @@ const metaEl = document.getElementById("meta");
 const metaText = document.getElementById("meta-text");
 const statusEl = document.getElementById("status");
 const curlBtn = document.getElementById("curl");
-const curlCmd = document.getElementById("curl-cmd");
 const heroEl = document.querySelector(".hero");
 
 const rootStyle = getComputedStyle(document.documentElement);
@@ -206,7 +205,7 @@ function copyCIDR() {
 
 let curlTimer;
 async function copyCurl() {
-  const cmd = curlCmd.textContent;
+  const cmd = curlBtn.dataset.copy;
   curlBtn.dataset.copied = "";
   clearTimeout(curlTimer);
   curlTimer = setTimeout(() => {
