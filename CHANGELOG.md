@@ -14,6 +14,16 @@ follows [Semantic Versioning](https://semver.org/).
   hides on very short viewports so it never crowds the address.
 - README and `llms.txt` show `curl -4` and `curl -6` to force an address
   family.
+- **H** and **B** show the address in hex or binary, scrambling between
+  formats; **Esc** goes back. Copying always uses the plain address.
+- The page re-checks the address when the tab regains focus or the network
+  changes (at most every 10 s, no polling) and scrambles to the new one, for
+  example after turning on a VPN. The tab title shows the address.
+- The brand "rise" entrance for the address, hint and footer.
+- The ambient glitch from mlz.no in the footer: every few seconds one to
+  three letters flicker in `--accent` and `--glitch-2`, on the home and 404
+  pages. Off with reduced motion and while the tab is hidden. The 404 code
+  glitches once on load and again on hover.
 - An Open Graph card (`public/assets/social/og.png`, 1200×630) rendered from
   `tools/og/og.html`, with `summary_large_image` for link previews.
 - JSON-LD (`WebApplication`) and `llms.txt` describing the page and `/ip`.
@@ -26,6 +36,12 @@ follows [Semantic Versioning](https://semver.org/).
 - Aligned with the mlz brand: the favicon is the brand mark, dark-theme
   `--fg-muted` matches the brand value, and the brand's `--fg-secondary`,
   `--border` and `--radius` tokens are available.
+- Smoother motion throughout: digits fade in as they lock instead of
+  snapping, the hover underline and separators run off one animated value,
+  pressing the address nudges it instead of scaling the text, the hint line
+  swaps out and in without flashing violet, and footer links get a growing
+  underline. Footer hover no longer sticks after a tap on touch screens,
+  and copying the command swaps `$` for a check mark.
 - Clearer page and manifest description that mentions the `/ip` endpoint.
 - README gets a light/dark site banner and a link row, in line with mlz.no.
 - `package.json` `version` now tracks releases (it was left at 1.0.0 for

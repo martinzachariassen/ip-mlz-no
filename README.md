@@ -38,6 +38,11 @@ real one.
 - Click or tap to copy. **C** copies the address, **R** copies it as a CIDR
   (`/32` or `/128`). The `$ curl ip.mlz.no/ip` in the footer copies the
   command.
+- **H** shows the address in hex (IPv6 fully expanded), **B** in binary
+  (IPv4 only). Press the key again or **Esc** to go back.
+- The address updates by itself when it changes, for example when you turn
+  on a VPN: the page checks again when the tab regains focus or the network
+  changes, never on a timer. The tab title shows the address.
 - IPv4 and IPv6, with type sized to fit the address on any screen.
 - Light and dark themes that follow the system setting, with colours and icons
   from the [mlz brand](https://mlz.no/brand/BRAND.md).

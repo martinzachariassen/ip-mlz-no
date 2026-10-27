@@ -5,7 +5,7 @@
 ## Usage
 
 - [Plain-text endpoint](https://ip.mlz.no/ip): `GET /ip` returns the caller's address as plain text and is never cached. `HEAD` is also allowed; other methods return 405. Use https.
-- [Web page](https://ip.mlz.no/): the same address in large type, click or press C to copy, R to copy as CIDR (/32 or /128).
+- [Web page](https://ip.mlz.no/): the same address in large type, click or press C to copy, R to copy as CIDR (/32 or /128). H shows it in hex, B in binary (IPv4 only).
 
 Examples:
 
