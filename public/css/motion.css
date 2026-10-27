@@ -1,3 +1,25 @@
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* backwards, not both: a forwards fill would pin translate and block :active. */
+.hero > .ip-display,
+.hero > .meta,
+.sig,
+.notfound > * {
+  animation: rise 0.9s var(--ease) backwards;
+}
+.hero > .meta,
+.notfound > :nth-child(2) {
+  animation-delay: 90ms;
+}
+.sig {
+  animation-delay: 180ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero {
     transition-duration: 120ms;
@@ -28,5 +50,11 @@
   .sig-prompt > * {
     translate: none;
     transition-duration: 0.01ms;
+  }
+  .hero > .ip-display,
+  .hero > .meta,
+  .sig,
+  .notfound > * {
+    animation: none;
   }
 }
