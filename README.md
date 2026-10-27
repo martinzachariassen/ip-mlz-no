@@ -9,6 +9,8 @@
 
 <p align="center">
   <a href="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml"><img src="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/deploy.yml"><img src="https://github.com/martinzachariassen/ip-mlz-no/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
+  <a href="https://github.com/martinzachariassen/ip-mlz-no/releases/latest"><img src="https://img.shields.io/github/v/release/martinzachariassen/ip-mlz-no" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/martinzachariassen/ip-mlz-no" alt="License: MIT"></a>
 </p>
 
@@ -29,31 +31,28 @@ shows your public IPv4 or IPv6 address in large type, copies it on click, and
 serves it as plain text at `/ip`.
 
 It is a static frontend on Firebase Hosting plus one small Go service on Cloud
-Run, with no frontend build step. The address in the banner is
-[RFC 5737](https://www.rfc-editor.org/rfc/rfc5737) documentation space, not a
-real one.
+Run, with no frontend build step. Because the only per-request code is the
+`/ip` handler, the hardening (CSP, HSTS, cache policy) lives in
+[`firebase.json`](firebase.json), and a script proves it takes effect. The
+address in the banner is [RFC 5737](https://www.rfc-editor.org/rfc/rfc5737)
+documentation space, not a real one.
 
-## Features
+## What's in it
 
-- Click or tap to copy. **C** copies the address, **R** copies it as a CIDR
-  (`/32` or `/128`). The `$ curl ip.mlz.no/ip` in the footer copies the
-  command.
-- **H** shows the address in hex (IPv6 fully expanded), **B** in binary
-  (IPv4 only). Press the key again or **Esc** to go back.
-- The address updates by itself when it changes, for example when you turn
-  on a VPN: the page checks again when the tab regains focus or the network
-  changes, never on a timer. The tab title shows the address.
-- IPv4 and IPv6, with type sized to fit the address on any screen.
-- Light and dark themes that follow the system setting, with colours and icons
-  from the [mlz brand](https://mlz.no/brand/BRAND.md).
-- A social card for link previews, JSON-LD and an
-  [`llms.txt`](public/llms.txt).
-- Strict security headers: a `'self'`-only CSP, self-hosted fonts and no
-  third-party requests.
+| | |
+| --- | --- |
+| **One click to copy** | Click, tap or press **C** to copy the address, **R** for a CIDR (`/32` or `/128`). The footer's `$ curl ip.mlz.no/ip` copies the command. |
+| **Fitted type** | IPv4 and IPv6 are sized to fit any screen, and a long IPv6 address wraps onto two lines on a phone. |
+| **Follows your network** | Turn on a VPN and the address scrambles to the new one. The page checks again when the tab regains focus or the network changes, never on a timer. The tab title shows the address. |
+| **Plain text too** | `curl ip.mlz.no/ip` returns the bare address, never cached. |
+| **mlz brand** | Colours, type, icons, the rise entrance and the footer glitch come from the [mlz brand](https://mlz.no/brand/BRAND.md), in light and dark. Everything honours reduced motion. |
+| **No third parties** | A `'self'`-only CSP, self-hosted fonts and no third-party requests. Verified by [`scripts/verify.sh`](scripts/verify.sh). |
+| **Keyless deploys** | Every PR gets a preview, every push to `main` goes to production, and GitHub logs in to Google Cloud with Workload Identity Federation. |
+| **Infrastructure as code** | The GCP project, Hosting, the custom domain and the repo settings are Terraform in [`infra/`](infra/README.md). |
 
 ## Usage
 
-Open the page, or call the endpoint directly:
+Open [ip.mlz.no](https://ip.mlz.no), or call the endpoint directly:
 
 ```sh
 curl https://ip.mlz.no/ip
@@ -68,6 +67,18 @@ The response is the bare address as plain text. It is never cached
 answers `405`. Use `https://`: plain `http://` gets a redirect rather than the
 address.
 
+On the page:
+
+| Key | Does |
+| --- | --- |
+| Click, tap or **C** | Copy the address |
+| **R** | Copy it as a CIDR: `/32` for IPv4, `/128` for IPv6 |
+| **H** | Show it in hex (IPv6 fully expanded); press again to go back |
+| **B** | Show it in binary (IPv4 only); press again to go back |
+| **Esc** | Back to the plain address |
+
+Copying always uses the plain address, whatever format is on screen.
+
 ## Architecture
 
 ```
@@ -76,10 +87,19 @@ Browser ──► Firebase Hosting ──► static files from public/
                  └─ /ip ──► Cloud Run service ip-go (europe-west1)
 ```
 
-`public/` is plain HTML, CSS and ES modules, served exactly as committed.
-Hosting adds the security headers and cache policy
-([`firebase.json`](firebase.json)) and rewrites `/ip` to the Cloud Run service
-([`server/main.go`](server/main.go)).
+- `public/index.html` is the page, with styles split by concern in
+  `public/css/` (tokens, base, ip-display, meta, footer, motion) and
+  `style.css` as the entry point.
+- Four ES modules in `public/js/`: `main.js` fetches and fits the address and
+  handles copying, formats and live updates, `scramble.js` runs the
+  digit-scramble animation, `clipboard.js` copies with a fallback for older
+  browsers, and `glitch.js` adds the occasional footer flicker (off with
+  reduced motion).
+- Hosting adds the security headers and cache policy
+  ([`firebase.json`](firebase.json)) and rewrites `/ip` to the Cloud Run
+  service ([`server/main.go`](server/main.go)).
+- `public/404.html` is served as a real 404 for any other path, so every URL
+  in it is root-relative.
 
 The service reads the caller's address from `X-Forwarded-For` and only
 echoes it back if it parses as an IP address. An IPv4-mapped IPv6 address is
@@ -160,7 +180,23 @@ done
 kill %1
 ```
 
-`--force-prefers-reduced-motion` skips the scramble animation.
+`--force-prefers-reduced-motion` skips the scramble animation, the rise
+entrance and the footer glitch.
+
+</details>
+
+<details>
+<summary><strong>Project layout</strong></summary>
+
+```
+public/          The site, served as-is: index.html, 404.html, css/, js/, assets/
+server/          The /ip service: a standard-library-only Go module for Cloud Run
+scripts/         verify.sh, the quality gate for CI and deploys
+tools/og/        Source page for the social card (not deployed)
+infra/           Terraform for GCP, Hosting, the domain and the GitHub repo
+.github/         Workflows, PR and issue templates, Dependabot and the README banner
+firebase.json    Hosting config: rewrites, headers, cache policy, emulator port
+```
 
 </details>
 
@@ -188,6 +224,22 @@ They ship from `deploy.yml`, with Cloud Build and `firebase deploy`. `plan`
 and `apply` are run by hand, so the deploy account never needs rights to
 change IAM. See [`infra/README.md`](infra/README.md).
 
+## Troubleshooting
+
+- **The page says "no route · can't see you from here"**: the `/ip` request
+  failed or timed out (after 15 seconds). Reload, or try
+  `curl https://ip.mlz.no/ip` to see whether the endpoint answers.
+- **It shows IPv6 when you expected IPv4, or the other way round**: the site
+  has both A and AAAA records, so you get whichever your network prefers. Use
+  `curl -4` or `curl -6` to ask for one.
+- **`curl ip.mlz.no/ip` prints HTML or a redirect**: use `https://`. Plain
+  `http://` is redirected.
+- **The address didn't change after you switched network**: the page
+  re-checks when the tab regains focus or the network changes, at most every
+  10 seconds. Switch away and back, or reload.
+
+Still stuck? [Open an issue](https://github.com/martinzachariassen/ip-mlz-no/issues/new/choose).
+
 ## Contributing
 
 This is a personal project, so new features are unlikely to be merged, but bug
@@ -196,6 +248,12 @@ reports and small fixes are welcome as an issue or a pull request.
 - `bun run lint` and `./scripts/verify.sh` must pass.
 - Commits must be signed. `main` requires linear history, and PRs are squashed
   or rebased.
+
+## Security
+
+Please report vulnerabilities privately through
+[GitHub security advisories](https://github.com/martinzachariassen/ip-mlz-no/security/advisories/new),
+not in a public issue.
 
 ## License
 
