@@ -4,6 +4,13 @@ All notable changes to ip.mlz.no are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-11-10
+
+### Dependencies
+
+- Routine updates of Biome, firebase-tools, `jdx/mise-action` and the
+  Google Terraform providers (#28, #29, #30).
+
 ## [2.1.0] - 2026-10-27
 
 ### Added
@@ -95,6 +102,7 @@ follows [Semantic Versioning](https://semver.org/).
   large type, fitted to the screen, with click or **C** to copy and **R** to
   copy as CIDR, light and dark themes, and a plain-text `/ip` endpoint.
 
+[2.1.1]: https://github.com/martinzachariassen/ip-mlz-no/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/martinzachariassen/ip-mlz-no/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/martinzachariassen/ip-mlz-no/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/martinzachariassen/ip-mlz-no/releases/tag/v1.0.0
