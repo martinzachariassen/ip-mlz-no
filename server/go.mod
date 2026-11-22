@@ -1,3 +1,3 @@
 module github.com/martinzachariassen/ip-mlz-no/server
 
-go 1.25
+go 1.27

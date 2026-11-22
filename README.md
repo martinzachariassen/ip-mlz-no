@@ -117,7 +117,7 @@ the address the page shows is the real one.
 
 ## Development
 
-Requires [Bun](https://bun.sh), Node.js 22 and Go 1.25. All are pinned in
+Requires [Bun](https://bun.sh), Node.js 26 and Go 1.27. All are pinned in
 [`mise.toml`](mise.toml), so `mise install` sets them up. The Firebase CLI is a
 devDependency. `server/` is a standard-library-only Go module.
 
