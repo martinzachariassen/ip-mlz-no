@@ -7,7 +7,7 @@ variable "project_id" {
 variable "project_name" {
   description = "Display name of the GCP project."
   type        = string
-  default     = "what-is-my-ip"
+  default     = "What's my IP"
 }
 
 variable "region" {
