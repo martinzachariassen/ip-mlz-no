@@ -6,7 +6,7 @@ plus one Go Cloud Run service (`/ip`). See README.md for the full rationale.
 ## Commands
 
 ```sh
-bun install        # setup (Bun, Node 22 and Go via mise)
+bun install        # setup (Bun, Node 26 and Go via mise)
 bun run dev        # Hosting emulator: http://127.0.0.1:5050 (not 5000: macOS AirPlay)
 bun run dev:server # Go /ip service: http://127.0.0.1:8080/ip
 bun run test:server  # go vet + go test
