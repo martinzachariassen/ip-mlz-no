@@ -4,6 +4,23 @@ All notable changes to ip.mlz.no are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] - 2026-11-22
+
+### Changed
+
+- Tooling moved to the latest releases, with exact versions pinned in
+  `mise.toml`: Bun 1.4.5, Node 26.13.1, Go 1.27.4 (`server/go.mod` now
+  targets Go 1.27) and Terraform 1.17.2. Biome, firebase-tools, the Google
+  Terraform providers and the GitHub Actions are current too, and
+  `biome.json` follows the installed Biome schema (#36).
+- The Terraform lock file carries checksums for Linux and macOS, so CI's
+  read-only validation passes (#36).
+
+### Fixed
+
+- The GCP project display name in `infra/` now matches the one in use
+  (What's my IP), so `terraform plan` shows no drift (#37).
+
 ## [2.1.1] - 2026-11-10
 
 ### Dependencies
@@ -102,6 +119,7 @@ follows [Semantic Versioning](https://semver.org/).
   large type, fitted to the screen, with click or **C** to copy and **R** to
   copy as CIDR, light and dark themes, and a plain-text `/ip` endpoint.
 
+[2.1.2]: https://github.com/martinzachariassen/ip-mlz-no/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/martinzachariassen/ip-mlz-no/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/martinzachariassen/ip-mlz-no/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/martinzachariassen/ip-mlz-no/compare/v1.0.0...v2.0.0
